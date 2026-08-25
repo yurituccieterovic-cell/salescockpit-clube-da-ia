@@ -1,0 +1,15 @@
+{
+  "id": "/eco",
+  "name": "Eco",
+  "short_name": "Eco",
+  "start_url": "/eco",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0a14",
+  "theme_color": "#0a0a14",
+  "icons": [
+    { "src": "/icons/eco-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/eco-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/eco-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

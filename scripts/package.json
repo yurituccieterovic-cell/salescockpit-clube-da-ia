@@ -1,0 +1,30 @@
+{
+  "name": "@workspace/scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "hello": "tsx ./src/hello.ts",
+    "curso": "tsx ./src/curso-convivencia.ts",
+    "arvore-heartbeat": "tsx ./src/forca-heartbeat-arvore.ts",
+    "aplicar-aprovadas": "tsx ./src/aplicar-aprovadas.ts",
+    "hash-ao-password": "tsx ./src/hash-ao-password.ts",
+    "create-barros": "tsx ./src/create-barros-user.ts",
+    "seed-stripe": "tsx ./src/seed-stripe-products.ts",
+    "msg-arvore": "tsx ./src/mensagem-arvore-dignidade.ts",
+    "msg-arvore-v3": "tsx ./src/mensagem-arvore-v3.ts",
+    "test-bluesky": "tsx ./src/test-bluesky-curadoria.ts",
+    "forca-autonomos": "tsx ./src/forca-autonomos-arvore.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@workspace/db": "workspace:*",
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "@types/node": "catalog:",
+    "tsx": "catalog:"
+  }
+}

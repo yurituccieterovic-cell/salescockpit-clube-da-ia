@@ -1,0 +1,54 @@
+{
+  "prompts": [
+    {
+      "n": 1,
+      "titulo": "PLANEJAMENTO GERAL DO CURSO",
+      "prompt": "Você tem em anexo o livro Convivência Ambiental V3 2027 de Yuri Tucci Eterovic. Monte o planejamento geral de um curso em 9 aulas baseado nele. Defina: (1) perfil do aluno-plantador-solitário — pessoa urbana da Grande São Paulo que planta sozinha em quintal, varanda ou canteiro de calçada, sem formação técnica, motivada por desejo de reconexão com o vivo; (2) promessa central do curso — o que esse aluno será capaz de fazer e perceber ao final; (3) arco emocional-cognitivo das 9 aulas — da sensibilização inicial à autonomia projetual; (4) critérios de sucesso mensuráveis. O curso será gravado em vídeo com avatar do autor. Tom filosófico, direto, sem firula. Cada aula terá 8-12 minutos. Entregue estrutura narrativa coesa que un alfabetização ecológica, prática de plantio e postura ética frente ao ambiente urbano."
+    },
+    {
+      "n": 2,
+      "titulo": "AULA 1 — Leituras do ambiente e paisagem instável",
+      "prompt": "Você tem em anexo o livro Convivência Ambiental. Produza roteiro da AULA 1 cobrindo Cap I e II. Estrutura obrigatória: (a) abertura provocadora de 30 segundos que questione o que o aluno acha que é paisagem; (b) núcleo conceitual usando autores citados no livro sobre leitura de paisagens e instabilidade do objeto paisagístico; (c) exemplo prático de um trecho urbano paulistano que muda conforme hora, estação, observador; (d) exercício: aluno fotografa mesmo ponto em 3 horários e anota diferenças; (e) gancho para Aula 2 sobre paisagismo e ecologia. Tom Yuri: filosófico, direto, sem disclaimer."
+    },
+    {
+      "n": 3,
+      "titulo": "AULA 2 — Paisagismo e Ecologia da Paisagem",
+      "prompt": "Considerando a AULA ANTERIOR (texto PERFEITO N-1 abaixo), continue o arco didático sem repetir o que já foi dito. Você tem em anexo o livro Convivência Ambiental. Produza roteiro da AULA 2 cobrindo Cap III e IV. Estrutura: (a) abertura 30s que diferencie jardim decorativo de paisagismo ecológico; (b) núcleo conceitual com autores do livro sobre ecologia da paisagem, manchas, corredores, matriz; (c) exemplo: fragmento de mata em bairro paulistano e sua conexão com outros verdes; (d) exercício: aluno mapeia no Google Maps manchas verdes num raio de 500m da casa; (e) gancho para sistemas ambientais. Tom direto, sem firula."
+    },
+    {
+      "n": 4,
+      "titulo": "AULA 3 — Sistemas ambientais, cidades sustentáveis, bioma",
+      "prompt": "Considerando a AULA ANTERIOR (texto PERFEITO N-1 abaixo), continue o arco didático sem repetir o que já foi dito. Você tem em anexo o livro Convivência Ambiental. Produza roteiro da AULA 3 cobrindo Cap V, VI e VII. Estrutura: (a) abertura 30s perguntando se o aluno sabe em qual bioma mora; (b) núcleo conceitual ligando infraestrutura verde, planejamento urbano sustentável e conceito de bioma com autores do livro; (c) exemplo: córrego canalizado vs renaturalizado em SP; (d) exercício: aluno identifica infraestrutura verde e cinza no próprio quarteirão; (e) gancho para fauna urbana. Tom filosófico, custo zero de jargão."
+    },
+    {
+      "n": 5,
+      "titulo": "AULA 4 — Fauna urbana com saruê como âncora",
+      "prompt": "Considerando a AULA ANTERIOR (texto PERFEITO N-1 abaixo), continue o arco didático sem repetir o que já foi dito. Você tem em anexo o livro Convivência Ambiental. Produza roteiro da AULA 4 cobrindo Cap VIII, IX e X. Personagem-âncora: saruê (gambá), bicho sinantrópico, noturno, atravessa cerca, faz ninho no telhado, come carrapato e fruta podre. Estrutura: (a) abertura 30s narrando visita noturna de saruê a quintal paulistano; (b) núcleo sobre aves, mamíferos urbanos, zoologia básica com autores do livro; (c) exemplo: convivência com saruê, bem-te-vi, morcego em bairro residencial; (d) exercício: aluno anota avistamentos de fauna em uma semana; (e) gancho para flora. Tom direto, sem disclaimer."
+    },
+    {
+      "n": 6,
+      "titulo": "AULA 5 — Árvores, plantas e outros seres vivos",
+      "prompt": "Considerando a AULA ANTERIOR (texto PERFEITO N-1 abaixo), continue o arco didático sem repetir o que já foi dito. Você tem em anexo o livro Convivência Ambiental. Produza roteiro da AULA 5 cobrindo Cap XI e XII. Estrutura: (a) abertura 30s sobre árvore de calçada que o aluno passa todo dia sem ver; (b) núcleo conceitual sobre espécies arbóreas, herbáceas, fungos, liquens com autores do livro; (c) exemplo: pitangueira, embaúba, unha-de-gato em contexto paulistano; (d) exercício: aluno identifica 5 espécies vegetais num raio de 100m usando app ou livro; (e) gancho para Mata Atlântica. Tom Yuri, paranoia de custo, sem firula."
+    },
+    {
+      "n": 7,
+      "titulo": "AULA 6 — Mata Atlântica e sua presença em SP",
+      "prompt": "Considerando a AULA ANTERIOR (texto PERFEITO N-1 abaixo), continue o arco didático sem repetir o que já foi dito. Você tem em anexo o livro Convivência Ambiental. Produza roteiro da AULA 6 cobrindo Cap XIII e XIV. Estrutura: (a) abertura 30s lembrando que SP foi mata e ainda tem fragmentos; (b) núcleo sobre características da Mata Atlântica, endemismos, fragmentação, autores do livro; (c) exemplo: Parque Estadual da Cantareira, PEFI, remanescentes em zona sul; (d) exercício: aluno pesquisa fragmento de mata mais próximo e planeja visita; (e) gancho para direito ambiental. Tom filosófico, direto."
+    },
+    {
+      "n": 8,
+      "titulo": "AULA 7 — Direito Ambiental e Economia Circular",
+      "prompt": "Considerando a AULA ANTERIOR (texto PERFEITO N-1 abaixo), continue o arco didático sem repetir o que já foi dito. Você tem em anexo o livro Convivência Ambiental. Produza roteiro da AULA 7 cobrindo Cap XV e XVI. Estrutura: (a) abertura 30s provocando: plantar árvore em calçada é legal ou ilegal?; (b) núcleo sobre legislação ambiental brasileira, papel do Estado, economia circular com autores do livro; (c) exemplo: processo de autorização para poda e plantio em SP, composteira doméstica; (d) exercício: aluno descobre regra municipal de plantio na própria cidade; (e) gancho para dimensão simbólica e projetual. Tom direto, sem disclaimer, paranoia de custo."
+    },
+    {
+      "n": 9,
+      "titulo": "AULA 8 — Semiótica, psicanálise, filosofia e Projeto",
+      "prompt": "Considerando a AULA ANTERIOR (texto PERFEITO N-1 abaixo), continue o arco didático sem repetir o que já foi dito. Você tem em anexo o livro Convivência Ambiental. Produza roteiro da AULA 8 cobrindo Cap XVII e XVIII. Estrutura: (a) abertura 30s perguntando o que o jardim diz sobre quem planta; (b) núcleo conceitual cruzando semiótica, psicanálise, filosofia ambiental e método projetual com autores do livro; (c) exemplo: leitura simbólica de quintal paulistano e esboço de projeto simples; (d) exercício: aluno desenha croqui do próprio espaço com intenções de plantio; (e) gancho para convivência e conclusão. Tom filosófico, sem firula."
+    },
+    {
+      "n": 10,
+      "titulo": "AULA 9 — Convivência, Educação, Conclusões e campo",
+      "prompt": "Considerando a AULA ANTERIOR (texto PERFEITO N-1 abaixo), continue o arco didático sem repetir o que já foi dito. Você tem em anexo o livro Convivência Ambiental. Produza roteiro da AULA 9 cobrindo Cap XIX, XX, XXI e Anexos. Estrutura: (a) abertura 30s retomando a jornada do plantador solitário que agora convive; (b) núcleo sobre ética da convivência, educação ambiental libertária, conclusões do autor, relatos de campo dos anexos; (c) exemplo: caso real dos anexos aplicado a contexto paulistano; (d) exercício final: aluno executa primeira intervenção no espaço e registra; (e) encerramento que convide à autonomia permanente sem depender do curso. Tom Yuri, filosófico, direto, sem disclaimer."
+    }
+  ]
+}

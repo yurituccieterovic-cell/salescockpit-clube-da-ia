@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "AI Sales Assistant"
+version = "1.0.0"
+id = "artifacts/sales-assistant"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23103
+
+[services.development]
+run = "pnpm --filter @workspace/sales-assistant run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sales-assistant", "run", "build" ]
+publicDir = "artifacts/sales-assistant/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23103"
+BASE_PATH = "/"

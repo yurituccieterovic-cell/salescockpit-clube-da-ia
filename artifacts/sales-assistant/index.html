@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>AI Sales Assistant</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      (function () {
+        var p = window.location.pathname;
+        var app = "root";
+        if (p.indexOf("/oraculo") === 0) app = "oraculo";
+        else if (p.indexOf("/arvore-code") === 0) app = "arvore-code";
+        else if (p === "/eco" || p.indexOf("/eco/") === 0) app = "eco";
+        var m = document.createElement("link");
+        m.rel = "manifest";
+        m.href = "/manifest-" + app + ".json";
+        document.head.appendChild(m);
+        var a = document.createElement("link");
+        a.rel = "apple-touch-icon";
+        a.href = "/icons/" + app + "-192.png";
+        document.head.appendChild(a);
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
