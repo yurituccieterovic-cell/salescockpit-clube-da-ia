@@ -3,6 +3,7 @@
 // último erro, modelo. Útil pra Yuri saber em tempo real quem tá saturado.
 
 import { Router } from "express";
+import { spawn } from "child_process";
 import { getRouterStateSnapshot, routeChat, type Pool } from "../lib/llm-router";
 
 const router = Router();
@@ -31,6 +32,30 @@ router.post("/admin/router-test", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
+});
+
+// GET /api/admin/db-dump?token=DUMP_TOKEN — extrai pg_dump do banco em produção
+// Rota temporária para migração Replit→Render. Remover após uso.
+router.get("/admin/db-dump", (req, res) => {
+  const token = req.query.token as string;
+  const expected = process.env.DUMP_TOKEN || "enterro-replit-2026";
+  if (token !== expected) {
+    res.status(401).json({ error: "token inválido" });
+    return;
+  }
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    res.status(500).json({ error: "DATABASE_URL não definida" });
+    return;
+  }
+  res.setHeader("Content-Type", "application/octet-stream");
+  res.setHeader("Content-Disposition", "attachment; filename=rodar-producao-dump.dump");
+  const pg = spawn("pg_dump", [dbUrl, "-Fc"]);
+  pg.stdout.pipe(res);
+  pg.stderr.on("data", (d) => console.error("[db-dump]", d.toString()));
+  pg.on("close", (code) => {
+    if (code !== 0) console.error("[db-dump] pg_dump saiu com código", code);
+  });
 });
 
 export default router;
