@@ -255,15 +255,13 @@ async function streamGroqResponse(
     onChunk("", true, "GROQ_API_KEY não configurada. Adicione-a em Secrets no Replit.");
     return;
   }
-  // Se o Groq já está em cooling (RODAR/voz irmã esgotou há pouco), não mói os
-  // ~10s de retry — vai direto pra cadeia grátis, que também pula quem está frio.
-  if (!providerAvailable("groq")) {
-    await fallbackAfterGroq(messages, onChunk);
-    return;
-  }
+  // Não pula o Groq por cooling de batch/loops de background — o chat interativo
+  // tem prioridade. Apenas evita retry longo: tenta 1x com timeout de 20s,
+  // se falhar cai na cadeia de fallback normalmente.
+  const groqInCooling = !providerAvailable("groq");
   let groqEmitted = false;
   try {
-    const doFetch = () =>
+    const doFetch = (timeoutMs?: number) =>
       fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -275,10 +273,13 @@ async function streamGroqResponse(
           messages,
           stream: true,
         }),
+        ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {}),
       });
 
-    let response = await doFetch();
-    if (response.status === 429) {
+    // Se Groq está em cooling por uso de batch/loops, tenta 1x com timeout curto
+    // (sem retry de 429). Se falhar, cai na cadeia. Se passar, chat interativo ganha.
+    let response = await doFetch(groqInCooling ? 20000 : undefined);
+    if (!groqInCooling && response.status === 429) {
       const retryAfter = Number.parseFloat(response.headers.get("retry-after") ?? "");
       const waitMs = Math.min(Math.max(Number.isFinite(retryAfter) ? retryAfter * 1000 : 2000, 500), 8000);
       try { response.body?.cancel(); } catch {}
