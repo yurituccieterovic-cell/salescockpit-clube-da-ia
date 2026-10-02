@@ -95,7 +95,7 @@ app.use("/api", router);
 const uiDist = path.resolve(__dirname, "../../sales-assistant/dist/public");
 if (existsSync(uiDist)) {
   app.use(express.static(uiDist));
-  app.get("*", (_req, res) => {
+  app.get("/*path", (_req, res) => {
     res.sendFile(path.join(uiDist, "index.html"));
   });
 }
