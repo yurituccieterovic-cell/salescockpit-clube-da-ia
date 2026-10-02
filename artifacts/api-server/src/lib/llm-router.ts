@@ -46,11 +46,9 @@ export type RouterResult = {
 
 const POOLS: Record<Pool, Provider[]> = {
   // Chat ao vivo — latência importa, prioriza Groq (mais rápido) com fallbacks rápidos.
-  // GitHub Models REMOVIDO daqui: o token grátis não tem escopo "models" e responde
-  // 401 sempre. Mantê-lo na frente do Gemini só desperdiçava um round-trip por hora
-  // (e, sob tempestade de 429, atrasava o Oráculo chegar no Gemini, que é o degrau
-  // confiável). Quando o groq está em cooling, agora cai direto no Gemini.
-  "chat-live": ["groq", "gemini", "openrouter", "cerebras"],
+  // CF adicionado como fallback real: llama-3.3-70b funciona e suporta contextos grandes,
+  // resolve o problema de Groq 8000 TPM ser esgotado pelos loops de background.
+  "chat-live": ["groq", "cloudflare", "gemini", "openrouter", "cerebras"],
   // Batch (heartbeat/devaneio/curadoria) — prefere provedores grátis sem concorrer com chat.
   // Groq entra no final: Cerebras exige pagamento, Gemini com key inválida → Groq é o fallback real.
   "batch": ["cloudflare", "mistral", "cerebras", "gemini", "groq"],
