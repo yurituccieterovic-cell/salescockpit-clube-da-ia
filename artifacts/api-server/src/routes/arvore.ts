@@ -715,7 +715,8 @@ Use o material acima quando relevante. Se a pergunta não estiver coberta pelo m
   // Índice de TODAS as assembleias (id + data + tema): a Árvore passa a CONHECER cada
   // assunto já deliberado em toda a história, não só os recentes/casados por tema. Só temas
   // públicos, nunca conteúdo retido/segredo. R$0 (um select). Cap generoso (orçamento ~64k chars).
-  const assembleiaIndex = await getAssembleiaIndex(15000).catch(() => "");
+  // Cap reduzido de 15000→4000 para caber no limite de 8000 TPM do gpt-oss-120b.
+  const assembleiaIndex = await getAssembleiaIndex(4000).catch(() => "");
   // FAIXA da memória (fatos curtos) pro SYSTEM PROMPT — sempre presente, nunca cortada pelo
   // teto de 30k do contexto. O índice/digest grandes (abaixo) podem ser truncados sob pressão
   // de orçamento, deixando só a cauda recente; sem estas linhas no system, a Árvore respondia
@@ -748,7 +749,7 @@ Use o material acima quando relevante. Se a pergunta não estiver coberta pelo m
     ? await recallFromProjectChats(text, { capChars: 2000, nameMatchOnly: true }).catch(() => ({ block: "", hits: 0 }))
     : { block: "", hits: 0 };
   // Memória destilada: lições curtas por tema (rápido de acessar, barato em tokens).
-  const memoriaEstruturada = await getMemoriaEstruturada(3000).catch(() => "");
+  const memoriaEstruturada = await getMemoriaEstruturada(1000).catch(() => "");
   // Recall: busca na timeline INTEIRA por nomes próprios/projetos/temas da pergunta.
   // Recupera o que está FORA da janela das 80 msgs recentes — corrige "a Árvore não lembra
   // do que falei antes" (ex.: projeto citado há semanas). Custo R$ 0 (só Postgres ILIKE).
@@ -759,7 +760,7 @@ Use o material acima quando relevante. Se a pergunta não estiver coberta pelo m
   // Digest da timeline INTEIRA: índice de TODOS os assuntos já trazidos à Árvore (não só os
   // 80 recentes nem só os que casam por palavra-chave). Sempre presente — corrige "ela ainda
   // tá sem a memória de todos os chats" em perguntas gerais de memória. R$0 (um select).
-  const timelineDigest = await getTimelineDigest({ capChars: 4500 }).catch(() => "");
+  const timelineDigest = await getTimelineDigest({ capChars: 2000 }).catch(() => "");
   const queryForWeb = stripWebPrefix(text);
   let webResult: Awaited<ReturnType<typeof searchWeb>> = null;
   if (isFactualQuestion(text)) {
@@ -905,11 +906,10 @@ Use o material acima quando relevante. Se a pergunta não estiver coberta pelo m
     });
   } catch {}
 
-  // Budget contexto automático (site/arch/web/URLs): 30k chars. Groq tier free aceita
-  // ~16k tokens por request — passar disso dispara HTTP 413. 30k chars de contexto +
-  // 12k de histórico + system prompt + anexos = fica abaixo do teto com folga.
-  // Se mesmo assim estourar, o streamGroqResponse cai pro Gemini fallback automaticamente.
-  const MAX_CONTEXT_CHARS = 30000;
+  // Budget contexto automático: gpt-oss-120b tem 8000 TPM. System base ~3500 tok +
+  // contexto + histórico deve ficar < 7500 tok total (~30k chars total disponível).
+  // Contexto: 8000 chars → ~2000 tok. Histórico: 8000 chars → ~2000 tok. Soma: ~7500.
+  const MAX_CONTEXT_CHARS = 8000;
   // Corte POR PRIORIDADE: acumula bloco a bloco na ordem montada acima (mais importante
   // primeiro). Quando um bloco não cabe inteiro, trunca SÓ ele (se sobrar espaço útil) e
   // para — assim os blocos iniciais (recalls da pergunta + memória sempre-presente)
@@ -936,10 +936,9 @@ Use o material acima quando relevante. Se a pergunta não estiver coberta pelo m
     const attachBlock = "─── ANEXOS DO USUÁRIO (processados localmente) ───\n" + parts.join("\n\n───\n\n");
     joined = joined ? `${joined}\n\n${attachBlock}` : attachBlock;
   }
-  // Histórico: corta do mais antigo até caber em 20k chars (mais memória de conversa).
-  // Cada mensagem média ~400 chars → cabem ~50 trocas das 80 carregadas, priorizando recentes.
+  // Histórico: orçamento reduzido para 8k chars para caber no limite de 8000 TPM.
   let histChars = 0;
-  const histBudget = 20_000;
+  const histBudget = 8_000;
   const trimmedHistory: { role: string; content: string }[] = [];
   for (let i = history.length - 1; i >= 0; i--) {
     const h = history[i]!;
