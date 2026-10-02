@@ -63,6 +63,7 @@ async function streamCerebrasFallback(
         messages,
         stream: true,
       }),
+      signal: AbortSignal.timeout(10000),
     });
     if (!response.ok || !response.body) {
       try { response.body?.cancel(); } catch {}
@@ -146,6 +147,7 @@ async function streamGeminiFallback(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: reqBody,
+        signal: AbortSignal.timeout(15000),
       });
       if (!response.ok || !response.body) {
         try { response.body?.cancel(); } catch {}
