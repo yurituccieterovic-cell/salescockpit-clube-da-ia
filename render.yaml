@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: salescockpit-api
+    runtime: node
+    buildCommand: >
+      pnpm install --no-frozen-lockfile &&
+      BASE_PATH=/ NODE_ENV=production pnpm --filter @workspace/sales-assistant run build &&
+      pnpm --filter @workspace/api-server run build
+    startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8080

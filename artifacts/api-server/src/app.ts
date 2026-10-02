@@ -7,6 +7,11 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { WebhookHandlers } from "./webhookHandlers";
+import path from "path";
+import { fileURLToPath } from "url";
+import { existsSync } from "fs";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app: Express = express();
 
@@ -85,5 +90,14 @@ app.use(
 );
 
 app.use("/api", router);
+
+// Serve frontend estático (build do Vite) — só em produção
+const uiDist = path.resolve(__dirname, "../../sales-assistant/dist/public");
+if (existsSync(uiDist)) {
+  app.use(express.static(uiDist));
+  app.get("*", (_req, res) => {
+    res.sendFile(path.join(uiDist, "index.html"));
+  });
+}
 
 export default app;
