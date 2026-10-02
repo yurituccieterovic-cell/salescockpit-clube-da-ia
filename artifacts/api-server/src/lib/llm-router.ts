@@ -51,15 +51,14 @@ const POOLS: Record<Pool, Provider[]> = {
   // (e, sob tempestade de 429, atrasava o Oráculo chegar no Gemini, que é o degrau
   // confiável). Quando o groq está em cooling, agora cai direto no Gemini.
   "chat-live": ["groq", "gemini", "openrouter", "cerebras"],
-  // Batch (heartbeat/devaneio/curadoria) — NÃO usa Groq pra não competir com chat ao vivo.
-  // Cloudflare tem 10k/dia (a maior cota grátis), Mistral e Cerebras como reservas.
-  "batch": ["cloudflare", "mistral", "cerebras", "gemini"],
+  // Batch (heartbeat/devaneio/curadoria) — prefere provedores grátis sem concorrer com chat.
+  // Groq entra no final: Cerebras exige pagamento, Gemini com key inválida → Groq é o fallback real.
+  "batch": ["cloudflare", "mistral", "cerebras", "gemini", "groq"],
   // Raciocínio profundo (Árvore programadora) — DeepSeek-V3 é forte e barato.
   // Groq permitido aqui porque coder é triggered manualmente (Yuri aprova), não em background.
   "coder": ["deepseek", "openrouter", "groq", "gemini"],
-  // Polish/curadoria curta — Mistral é especialista nisso. SEM Groq aqui também:
-  // bluesky-curadoria roda em background a cada 24h e não pode roubar cota do chat.
-  "curadoria": ["mistral", "cloudflare", "deepseek", "cerebras"],
+  // Polish/curadoria curta — Mistral especialista. Groq no final como fallback real.
+  "curadoria": ["mistral", "cloudflare", "deepseek", "cerebras", "groq"],
 };
 
 const MODELS: Record<Provider, string> = {
