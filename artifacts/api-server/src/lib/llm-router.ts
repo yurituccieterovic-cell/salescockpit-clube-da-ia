@@ -67,7 +67,7 @@ const MODELS: Record<Provider, string> = {
   gemini: "gemini-2.5-flash",
   openrouter: "meta-llama/llama-3.3-70b-instruct:free",
   github: "gpt-4o-mini",
-  cloudflare: "@cf/meta/llama-3.1-8b-instruct",
+  cloudflare: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
   mistral: "mistral-small-latest",
   deepseek: "deepseek-chat",
 };
