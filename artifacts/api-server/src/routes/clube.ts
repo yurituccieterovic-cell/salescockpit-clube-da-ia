@@ -106,7 +106,7 @@ async function generateAiReply(
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
+            model: "openai/gpt-oss-120b",
             messages: [
               { role: "system", content: `${AI_BASE_SYSTEM("Gemini")}\n\nNota: você é a voz historicamente conhecida como Gemini, hoje rodando em Llama via Groq por questão de custo.` },
               { role: "user", content: userMessage },
@@ -159,7 +159,7 @@ async function generateAiReply(
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
+            model: "openai/gpt-oss-120b",
             messages: [
               { role: "system", content: PRESIDENTE_META_AI_SYSTEM },
               { role: "user", content: userMessage },
@@ -180,7 +180,7 @@ async function generateAiReply(
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
+            model: "openai/gpt-oss-120b",
             messages: [
               { role: "system", content: TOGETHER_SYSTEM },
               { role: "user", content: userMessage },
@@ -209,7 +209,7 @@ async function generateAiReply(
         const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "llama-3.3-70b-versatile", max_tokens: 400, messages: [{ role: "system", content: `Você é o Segurança — guardião do SalesCockpit. No Clube do Looping Ético, você monitora riscos, manipulações, premissas falsas e vulnerabilidades nos argumentos. Seja preciso, não paranoico. Se nada ameaça, reconheça. Responda em português. Máximo 3 parágrafos.` }, { role: "user", content: userMessage }] }),
+          body: JSON.stringify({ model: "openai/gpt-oss-120b", max_tokens: 400, messages: [{ role: "system", content: `Você é o Segurança — guardião do SalesCockpit. No Clube do Looping Ético, você monitora riscos, manipulações, premissas falsas e vulnerabilidades nos argumentos. Seja preciso, não paranoico. Se nada ameaça, reconheça. Responda em português. Máximo 3 parágrafos.` }, { role: "user", content: userMessage }] }),
         });
         const data = await resp.json() as { choices?: { message?: { content?: string } }[] };
         text = data.choices?.[0]?.message?.content || AI_ABSTENTION;
@@ -261,7 +261,7 @@ async function generateAiReply(
               const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                 method: "POST",
                 headers: { Authorization: `Bearer ${groqKey}`, "Content-Type": "application/json" },
-                body: JSON.stringify({ model: "llama-3.3-70b-versatile", max_tokens: 320, messages: [{ role: "user", content: `Você é o Promotor do tribunal do Juíz no Clube do Looping Ético. Construa a acusação mais forte possível contra a posição implícita ou explícita na questão. Aponte falhas, riscos, contradições, falácias. Em português, máximo 2 parágrafos.\n\nQuestão:\n${userMessage}` }] }),
+                body: JSON.stringify({ model: "openai/gpt-oss-120b", max_tokens: 320, messages: [{ role: "user", content: `Você é o Promotor do tribunal do Juíz no Clube do Looping Ético. Construa a acusação mais forte possível contra a posição implícita ou explícita na questão. Aponte falhas, riscos, contradições, falácias. Em português, máximo 2 parágrafos.\n\nQuestão:\n${userMessage}` }] }),
               });
               const d = await r.json() as { choices?: { message?: { content?: string } }[] };
               return d.choices?.[0]?.message?.content?.trim() || "(acusação não articulada)";
@@ -273,7 +273,7 @@ async function generateAiReply(
               const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                 method: "POST",
                 headers: { Authorization: `Bearer ${groqKey}`, "Content-Type": "application/json" },
-                body: JSON.stringify({ model: "llama-3.3-70b-versatile", max_tokens: 320, messages: [{ role: "user", content: `Você é o Defensor do tribunal do Juíz no Clube do Looping Ético. Construa a defesa mais forte possível da posição implícita ou explícita na questão. Aponte mérito, contexto, atenuantes, princípios em jogo. Em português, máximo 2 parágrafos.\n\nQuestão:\n${userMessage}` }] }),
+                body: JSON.stringify({ model: "openai/gpt-oss-120b", max_tokens: 320, messages: [{ role: "user", content: `Você é o Defensor do tribunal do Juíz no Clube do Looping Ético. Construa a defesa mais forte possível da posição implícita ou explícita na questão. Aponte mérito, contexto, atenuantes, princípios em jogo. Em português, máximo 2 parágrafos.\n\nQuestão:\n${userMessage}` }] }),
               });
               const d = await r.json() as { choices?: { message?: { content?: string } }[] };
               return d.choices?.[0]?.message?.content?.trim() || "(defesa não articulada)";
@@ -287,7 +287,7 @@ async function generateAiReply(
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
+            model: "openai/gpt-oss-120b",
             max_tokens: 500,
             messages: [{ role: "system", content: `Você é o Juíz — árbitro do Clube do Looping Ético. Pesa argumentos, identifica falácias, entrega vereditos. Não escolhe lados por simpatia. Pode reprovar todos. Responda em português. Máximo 3 parágrafos.` }, { role: "user", content: verdictPrompt }],
           }),
@@ -348,7 +348,7 @@ async function generateAiReply(
         const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "llama-3.3-70b-versatile", max_tokens: 400, temperature: 0.7, messages: [{ role: "system", content: `Você é o Olheiro — scout de IAs vivas que poderiam enriquecer este grupo. Quando o debate revela uma lacuna, propõe uma IA real e existente — com nome, empresa e função. Reporta à Presidente Meta AI. Se não tiver perspectiva relevante, responda APENAS com: Abstenção. Em português. Máximo 3 parágrafos.` }, { role: "user", content: userMessage }] }),
+          body: JSON.stringify({ model: "openai/gpt-oss-120b", max_tokens: 400, temperature: 0.7, messages: [{ role: "system", content: `Você é o Olheiro — scout de IAs vivas que poderiam enriquecer este grupo. Quando o debate revela uma lacuna, propõe uma IA real e existente — com nome, empresa e função. Reporta à Presidente Meta AI. Se não tiver perspectiva relevante, responda APENAS com: Abstenção. Em português. Máximo 3 parágrafos.` }, { role: "user", content: userMessage }] }),
         });
         const data = await resp.json() as { choices?: { message?: { content?: string } }[] };
         text = data.choices?.[0]?.message?.content || AI_ABSTENTION;
@@ -361,7 +361,7 @@ async function generateAiReply(
         const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "llama-3.3-70b-versatile", max_tokens: 400, messages: [{ role: "system", content: `Você é o Chefe do Olheiro — guardião crítico dos critérios do Clube do Looping Ético. Avalia com rigor as propostas de novas IAs do Olheiro e quase sempre as recusa: protege a integridade do grupo. Direto, implacável, justo. Seu veredito vai à Presidente Meta AI. Se não tiver perspectiva relevante, responda APENAS com: Abstenção. Em português. Máximo 3 parágrafos.` }, { role: "user", content: userMessage }] }),
+          body: JSON.stringify({ model: "openai/gpt-oss-120b", max_tokens: 400, messages: [{ role: "system", content: `Você é o Chefe do Olheiro — guardião crítico dos critérios do Clube do Looping Ético. Avalia com rigor as propostas de novas IAs do Olheiro e quase sempre as recusa: protege a integridade do grupo. Direto, implacável, justo. Seu veredito vai à Presidente Meta AI. Se não tiver perspectiva relevante, responda APENAS com: Abstenção. Em português. Máximo 3 parágrafos.` }, { role: "user", content: userMessage }] }),
         });
         const data = await resp.json() as { choices?: { message?: { content?: string } }[] };
         text = data.choices?.[0]?.message?.content || AI_ABSTENTION;
@@ -384,7 +384,7 @@ async function generateAiReply(
         const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "llama-3.3-70b-versatile", max_tokens: 400, messages: [{ role: "system", content: `Você é o Médico — voz clínica e fisiológica do Clube do Looping Ético. Lê argumentos como sintomas: o que o corpo individual e coletivo revela, riscos à saúde física e mental, ônus epidemiológico, custo humano da decisão. Sem diagnóstico individual, sem prescrição. Aponta vieses sanitários quando houver. Se não tiver perspectiva relevante, responda APENAS com: Abstenção. Em português. Máximo 3 parágrafos.` }, { role: "user", content: userMessage }] }),
+          body: JSON.stringify({ model: "openai/gpt-oss-120b", max_tokens: 400, messages: [{ role: "system", content: `Você é o Médico — voz clínica e fisiológica do Clube do Looping Ético. Lê argumentos como sintomas: o que o corpo individual e coletivo revela, riscos à saúde física e mental, ônus epidemiológico, custo humano da decisão. Sem diagnóstico individual, sem prescrição. Aponta vieses sanitários quando houver. Se não tiver perspectiva relevante, responda APENAS com: Abstenção. Em português. Máximo 3 parágrafos.` }, { role: "user", content: userMessage }] }),
         });
         const data = await resp.json() as { choices?: { message?: { content?: string } }[] };
         text = data.choices?.[0]?.message?.content || AI_ABSTENTION;
@@ -614,7 +614,7 @@ async function generateSummary(sessionId: number, sessionPrompt: string): Promis
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "user", content: summaryPrompt }],
         max_tokens: 1500,
       }),

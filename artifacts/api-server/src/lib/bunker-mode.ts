@@ -115,7 +115,7 @@ async function synthesisFallback(opts: {
   messages.push({ role: "user", content: opts.user });
   const result = await Promise.race([
     routeChat({
-      pool: "batch",
+      pool: "chat-live",
       messages,
       maxTokens: opts.maxTokens ?? 4000,
       label: `bunker-fallback/${opts.label ?? "síntese"}`,

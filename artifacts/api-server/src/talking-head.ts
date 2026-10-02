@@ -44,7 +44,7 @@ async function condenseForVideo(perfeito: string, sessionId: number): Promise<st
     // 2026-05: fetchGroqChat já faz retry on 429. Timeout granular de 45s perdido,
     // mas talking-head roda em background opt-in — aceitamos até 60s na pior hipótese.
     const resp = await fetchGroqChat({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.3,
       max_tokens: 2000,

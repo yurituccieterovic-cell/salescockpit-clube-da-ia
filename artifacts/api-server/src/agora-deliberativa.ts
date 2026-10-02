@@ -143,7 +143,7 @@ async function getVotesGemini(
     `Vote de 0 a 10 a relevância de cada seção.\n` +
     `Retorne SOMENTE JSON: {"votes":{"${sectionTitles.join('":5,"')}":5}}`;
     const resp = await fetchGroqChat({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 800,
     }, "agora-deliberativa.ts");
@@ -167,7 +167,7 @@ async function getVotesGrok(
     `Vote de 0 a 10 a relevância de cada seção.\n` +
     `Retorne SOMENTE JSON: {"votes":{"${sectionTitles.join('":5,"')}":5}}`;
     const response = await fetchGroqChat({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 600,
     }, "agora-deliberativa.ts");
@@ -190,7 +190,7 @@ async function getVotesMeta(
     `Vote de 0 a 10 a relevância de cada seção.\n` +
     `Retorne SOMENTE JSON: {"votes":{"${sectionTitles.join('":5,"')}":5}}`;
     const response = await fetchGroqChat({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 600,
       temperature: 0.3,

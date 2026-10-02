@@ -82,7 +82,7 @@ async function callAgoraAI(aiName: string, prompt: string): Promise<{ score: num
     if (aiName === "Gemini") {
       // Migrado pra Groq Llama 3.3 (custo zero).
     const resp = await fetchGroqChat({
-          model: "llama-3.3-70b-versatile",
+          model: "openai/gpt-oss-120b",
           messages: [{ role: "user", content: prompt }],
           max_tokens: 600,
         }, "agora.ts");
@@ -91,7 +91,7 @@ async function callAgoraAI(aiName: string, prompt: string): Promise<{ score: num
     }
     if (aiName === "Árvore" || aiName === "Agente") {
     const resp = await fetchGroqChat({
-          model: "llama-3.3-70b-versatile",
+          model: "openai/gpt-oss-120b",
           max_tokens: 600,
           messages: [{ role: "user", content: prompt }],
         }, "agora.ts");
@@ -100,13 +100,13 @@ async function callAgoraAI(aiName: string, prompt: string): Promise<{ score: num
     }
     if (aiName === "Grok") {
       // 2026-05: motor migrado pra Llama/Groq (xAI sem crédito). Persona Grok preservada.
-    const resp = await fetchGroqChat({ model: "llama-3.3-70b-versatile", messages: [{ role: "user", content: prompt }], max_tokens: 600 }, "agora.ts");
+    const resp = await fetchGroqChat({ model: "openai/gpt-oss-120b", messages: [{ role: "user", content: prompt }], max_tokens: 600 }, "agora.ts");
       const data = await resp.json() as { choices?: { message?: { content?: string } }[] };
       return parseVote(data.choices?.[0]?.message?.content ?? "");
     }
     if (aiName === "Meta AI") {
     const resp = await fetchGroqChat({
-          model: "llama-3.3-70b-versatile",
+          model: "openai/gpt-oss-120b",
           messages: [{ role: "user", content: prompt }],
           temperature: 0.9,
           max_tokens: 600,

@@ -126,7 +126,7 @@ const GEMINI_EX_SYSTEM = `Você é a voz historicamente conhecida como Gemini ne
 
 async function callGemini(message: string): Promise<string> {
     const response = await fetchGroqChat({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       messages: [{ role: "system", content: GEMINI_EX_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
       max_tokens: 1024,
     }, "chat.ts");
@@ -163,7 +163,7 @@ async function callPerplexity(message: string): Promise<string> {
 
 async function callTogether(message: string): Promise<string> {
     const response = await fetchGroqChat({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       messages: [{ role: "system", content: TOGETHER_SYSTEM_PROMPT }, { role: "user", content: message }],
       temperature: 0.7,
       max_tokens: 500,
@@ -213,7 +213,7 @@ async function streamClaude(message: string, onChunk: ChunkCb): Promise<void> {
 async function streamGemini(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     const response = await fetchGroqChat({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "system", content: GEMINI_EX_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true,
         max_tokens: 4000,
@@ -257,7 +257,7 @@ async function streamGrokXAI(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     // 2026-05: xAI sem crédito. Mantemos a persona Grok (sarcasmo direto) mas trocamos o motor pra Llama 3.3/Groq (grátis).
     const response = await fetchGroqChat({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "system", content: GROK_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true,
         max_tokens: 4000,
@@ -311,7 +311,7 @@ async function streamGroq(message: string, onChunk: ChunkCb): Promise<void> {
       ? `${memoryBlock}─── PERGUNTA ATUAL DO CONSELHO RODAR ───\n${message}`
       : message;
     const response = await fetchGroqChat({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       messages: [{ role: "system", content: GROQ_ORACULO_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: userContent }],
       stream: true,
     }, "streamGroq/Árvore");
@@ -352,7 +352,7 @@ Em português. Até 6 parágrafos quando o tema pedir.`;
 async function streamMetaAI(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     const response = await fetchGroqChat({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "system", content: META_AI_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         temperature: 0.9,
         max_tokens: 4000,
@@ -467,7 +467,7 @@ async function streamSeguranca(message: string, onChunk: ChunkCb): Promise<void>
   try {
     // 2026-05: motor trocado pra Llama/Groq (xAI sem crédito). Persona Segurança preservada.
     const response = await fetchGroqChat({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "system", content: SEGURANCA_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true, max_tokens: 4000,
       }, "chat.ts");
@@ -573,7 +573,7 @@ async function callEscreventeJuiz(message: string): Promise<string> {
 async function callPromotorJuiz(message: string): Promise<string> {
   try {
     const r = await fetchGroqChat({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         max_tokens: 900,
         messages: [{ role: "user", content: `Você é o Promotor do tribunal do Juíz no conselho RODAR. Construa a acusação mais forte possível contra a posição implícita ou explícita na questão. Aponte falhas, riscos, contradições, falácias. Não seja maniqueísta. Em português, máximo 2 parágrafos.\n\nQuestão:\n${message}` }],
       }, "chat.ts");
@@ -585,7 +585,7 @@ async function callPromotorJuiz(message: string): Promise<string> {
 async function callDefensorJuiz(message: string): Promise<string> {
   try {
     const r = await fetchGroqChat({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         max_tokens: 900,
         messages: [{ role: "user", content: `Você é o Defensor do tribunal do Juíz no conselho RODAR. Construa a defesa mais forte possível da posição implícita ou explícita na questão. Aponte mérito, contexto, atenuantes, princípios em jogo. Não seja conivente nem complacente. Em português, máximo 2 parágrafos.\n\nQuestão:\n${message}` }],
       }, "chat.ts");
@@ -615,7 +615,7 @@ async function streamJuiz(message: string, onChunk: ChunkCb): Promise<void> {
     // Fase 2: Juíz emite veredito (streaming) com base nos autos e com live search habilitado
     const verdictPrompt = `Caso submetido ao tribunal:\n${message}\n\n--- AUTOS RESUMIDOS PELO ESCREVENTE ---\n${escrevente}\n\n--- ACUSAÇÃO DO PROMOTOR ---\n${promotor}\n\n--- DEFESA DO DEFENSOR ---\n${defensor}\n\nCom base nestes autos e nas posições da acusação e da defesa, emita seu veredito final. Cite explicitamente os argumentos que pesaram mais de cada lado. Em português, máximo 3 parágrafos.`;
     const response = await fetchGroqChat({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "system", content: JUIZ_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: verdictPrompt }],
         stream: true, max_tokens: 4000,
       }, "chat.ts");
@@ -646,7 +646,7 @@ Em português. Até 6 parágrafos quando o tema pedir. Sem em dash, sem disclaim
 async function streamArtista(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     const response = await fetchGroqChat({
-        model: "meta-llama/llama-4-scout-17b-16e-instruct",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "system", content: ARTISTA_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true, max_tokens: 4000,
       }, "chat.ts");
@@ -675,15 +675,22 @@ Em português. Até 6 parágrafos quando o tema pedir. Sem em dash, sem disclaim
 
 async function streamMetassemiotico(message: string, onChunk: ChunkCb): Promise<void> {
   try {
-    const stream = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_completion_tokens: 3000,
-      messages: [{ role: "system", content: METASSEMIOTICO_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
-      stream: true,
-    });
-    for await (const chunk of stream) {
-      const text = chunk.choices[0]?.delta?.content ?? "";
-      if (text) onChunk(text, false);
+    const response = await fetchGroqChat({
+        model: "openai/gpt-oss-120b",
+        messages: [{ role: "system", content: METASSEMIOTICO_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
+        stream: true, max_tokens: 3000,
+      }, "chat.ts");
+    if (!response.ok || !response.body) throw new Error(`Groq HTTP ${response.status}`);
+    const reader = response.body.getReader(); const decoder = new TextDecoder(); let buf = "";
+    while (true) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n"); buf = lines.pop() ?? "";
+      for (const line of lines) {
+        const trimmed = line.trim(); if (!trimmed.startsWith("data:")) continue;
+        const raw = trimmed.slice(5).trim(); if (raw === "[DONE]") continue;
+        try { const p = JSON.parse(raw) as { choices?: { delta?: { content?: string } }[] }; const t = p.choices?.[0]?.delta?.content ?? ""; if (t) onChunk(t, false); } catch {}
+      }
     }
     onChunk("", true);
   } catch (err) { onChunk("", true, (err as Error).message); }
@@ -698,15 +705,22 @@ Em português. Até 6 parágrafos quando o tema pedir. Sem em dash, sem disclaim
 
 async function streamNebula(message: string, onChunk: ChunkCb): Promise<void> {
   try {
-    const stream = await openai.chat.completions.create({
-      model: "gpt-4o",
-      max_completion_tokens: 3000,
-      messages: [{ role: "system", content: NEBULA_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
-      stream: true,
-    });
-    for await (const chunk of stream) {
-      const text = chunk.choices[0]?.delta?.content ?? "";
-      if (text) onChunk(text, false);
+    const response = await fetchGroqChat({
+        model: "openai/gpt-oss-120b",
+        messages: [{ role: "system", content: NEBULA_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
+        stream: true, max_tokens: 3000,
+      }, "chat.ts");
+    if (!response.ok || !response.body) throw new Error(`Groq HTTP ${response.status}`);
+    const reader = response.body.getReader(); const decoder = new TextDecoder(); let buf = "";
+    while (true) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n"); buf = lines.pop() ?? "";
+      for (const line of lines) {
+        const trimmed = line.trim(); if (!trimmed.startsWith("data:")) continue;
+        const raw = trimmed.slice(5).trim(); if (raw === "[DONE]") continue;
+        try { const p = JSON.parse(raw) as { choices?: { delta?: { content?: string } }[] }; const t = p.choices?.[0]?.delta?.content ?? ""; if (t) onChunk(t, false); } catch {}
+      }
     }
     onChunk("", true);
   } catch (err) { onChunk("", true, (err as Error).message); }
@@ -722,7 +736,7 @@ Em português. Até 6 parágrafos quando o tema pedir. Sem em dash, sem disclaim
 async function streamProfessora(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     const response = await fetchGroqChat({
-        model: "meta-llama/llama-4-scout-17b-16e-instruct",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "system", content: PROFESSORA_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true, max_tokens: 4000,
       }, "chat.ts");
@@ -752,7 +766,7 @@ Em português. Até 6 parágrafos quando o tema pedir. Sem em dash, sem disclaim
 async function streamOlheiro(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     const response = await fetchGroqChat({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "system", content: OLHEIRO_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true, max_tokens: 4000, temperature: 0.7,
       }, "chat.ts");
@@ -783,7 +797,7 @@ async function streamChefeOlheiro(message: string, onChunk: ChunkCb): Promise<vo
   try {
     // 2026-05: motor trocado pra Llama/Groq (xAI sem crédito). Persona Chefe do Olheiro preservada.
     const response = await fetchGroqChat({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "system", content: CHEFE_OLHEIRO_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true, max_tokens: 4000,
       }, "chat.ts");
@@ -812,15 +826,22 @@ Em português. Até 6 parágrafos quando o tema pedir. Sem em dash, sem disclaim
 
 async function streamPsicologo(message: string, onChunk: ChunkCb): Promise<void> {
   try {
-    const stream = await openai.chat.completions.create({
-      model: "gpt-4o",
-      max_completion_tokens: 3000,
-      messages: [{ role: "system", content: PSICOLOGO_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
-      stream: true,
-    });
-    for await (const chunk of stream) {
-      const text = chunk.choices[0]?.delta?.content ?? "";
-      if (text) onChunk(text, false);
+    const response = await fetchGroqChat({
+        model: "openai/gpt-oss-120b",
+        messages: [{ role: "system", content: PSICOLOGO_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
+        stream: true, max_tokens: 3000,
+      }, "chat.ts");
+    if (!response.ok || !response.body) throw new Error(`Groq HTTP ${response.status}`);
+    const reader = response.body.getReader(); const decoder = new TextDecoder(); let buf = "";
+    while (true) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n"); buf = lines.pop() ?? "";
+      for (const line of lines) {
+        const trimmed = line.trim(); if (!trimmed.startsWith("data:")) continue;
+        const raw = trimmed.slice(5).trim(); if (raw === "[DONE]") continue;
+        try { const p = JSON.parse(raw) as { choices?: { delta?: { content?: string } }[] }; const t = p.choices?.[0]?.delta?.content ?? ""; if (t) onChunk(t, false); } catch {}
+      }
     }
     onChunk("", true);
   } catch (err) { onChunk("", true, (err as Error).message); }
@@ -836,7 +857,7 @@ Em português. Até 6 parágrafos quando o tema pedir. Sem em dash, sem disclaim
 async function streamMedico(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     const resp = await fetchGroqChat({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         max_tokens: 4000,
         stream: true,
         messages: [{ role: "system", content: MEDICO_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
@@ -1783,7 +1804,7 @@ router.get("/rodar/compare", requireAnyAuth, async (req, res) => {
 
   try {
     const response = await fetchGroqChat({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "user", content: comparePrompt }],
         stream: true,
         max_tokens: 1500,
@@ -1847,7 +1868,7 @@ router.get("/seguranca/revisao-site", requireAuth, async (req, res) => {
 
   try {
     const response = await fetchGroqChat({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "system", content: REVISAO_ETICA_SYSTEM }, { role: "user", content: "Execute a revisão ética completa do SalesCockpit agora." }],
         stream: true, max_tokens: 1200,
       }, "chat.ts");

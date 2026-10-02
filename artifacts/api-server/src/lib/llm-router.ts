@@ -63,7 +63,7 @@ const POOLS: Record<Pool, Provider[]> = {
 };
 
 const MODELS: Record<Provider, string> = {
-  groq: "llama-3.3-70b-versatile",
+  groq: "openai/gpt-oss-120b",
   cerebras: "gpt-oss-120b",
   gemini: "gemini-2.5-flash",
   openrouter: "meta-llama/llama-3.3-70b-instruct:free",

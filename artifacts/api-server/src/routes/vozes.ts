@@ -211,23 +211,23 @@ async function callAIForDescription(model: string, prompt: string): Promise<stri
   }
   if (model === "gemini") {
     // Migrado pra Groq Llama 3.3 (custo zero).
-    const resp = await fetchGroqChat({ model: "llama-3.3-70b-versatile", messages: [{ role: "user", content: prompt }], max_tokens: 600 }, "vozes.ts");
+    const resp = await fetchGroqChat({ model: "openai/gpt-oss-120b", messages: [{ role: "user", content: prompt }], max_tokens: 600 }, "vozes.ts");
     const data = await resp.json() as { choices?: { message?: { content?: string } }[] };
     return data.choices?.[0]?.message?.content ?? "";
   }
   if (model === "xai") {
     // 2026-05: motor migrado pra Llama/Groq (xAI sem crédito). Descrição de persona segue funcionando.
-    const resp = await fetchGroqChat({ model: "llama-3.3-70b-versatile", messages: [{ role: "user", content: prompt }], max_tokens: 600 }, "vozes.ts");
+    const resp = await fetchGroqChat({ model: "openai/gpt-oss-120b", messages: [{ role: "user", content: prompt }], max_tokens: 600 }, "vozes.ts");
     const data = await resp.json() as { choices?: { message?: { content?: string } }[] };
     return data.choices?.[0]?.message?.content ?? "";
   }
   if (model === "meta") {
-    const resp = await fetchGroqChat({ model: "llama-3.3-70b-versatile", messages: [{ role: "user", content: prompt }], max_tokens: 600 }, "vozes.ts");
+    const resp = await fetchGroqChat({ model: "openai/gpt-oss-120b", messages: [{ role: "user", content: prompt }], max_tokens: 600 }, "vozes.ts");
     const data = await resp.json() as { choices?: { message?: { content?: string } }[] };
     return data.choices?.[0]?.message?.content ?? "";
   }
   if (model === "groq") {
-    const resp = await fetchGroqChat({ model: "llama-3.3-70b-versatile", messages: [{ role: "user", content: prompt }], max_tokens: 600 }, "vozes.ts");
+    const resp = await fetchGroqChat({ model: "openai/gpt-oss-120b", messages: [{ role: "user", content: prompt }], max_tokens: 600 }, "vozes.ts");
     const data = await resp.json() as { choices?: { message?: { content?: string } }[] };
     return data.choices?.[0]?.message?.content ?? "";
   }

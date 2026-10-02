@@ -150,7 +150,7 @@ async function pickGroq(prompt: string, n: number, temperature?: number): Promis
     if (!process.env.GROQ_API_KEY) return null;
     const resp = await fetchGroqChat(
       {
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "user", content: prompt }],
         max_tokens: 400,
         ...(temperature !== undefined ? { temperature } : {}),

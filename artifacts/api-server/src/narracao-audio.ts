@@ -50,7 +50,7 @@ async function prepararTexto(perfeito: string, sessionId: number): Promise<strin
     `Texto:\n${clean.slice(0, 60000)}`;
   try {
     const resp = await fetchGroqChat({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.3,
       max_tokens: 3000,
