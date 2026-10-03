@@ -10,7 +10,6 @@
  * 6. Envia email com assunto RESULTADO — ...
  */
 
-import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import nodemailer from "nodemailer";
 import type { EditorialDecision } from "./routes/assembleia";
@@ -24,6 +23,18 @@ import { scaleSonnetTokens } from "./lib/dynamic-tokens";
 
 import { fetchGroqChat } from "./lib/groq-retry";
 import { synthesisBunkered, cerebrasComplete, type BunkerMode } from "./lib/bunker-mode";
+import { routeChat, type RouterMessage } from "./lib/llm-router";
+
+// Substitui Anthropic — usa routeChat("batch") com Gemini como primário (via pool)
+async function synthesizeWithRouter(
+  prompt: string,
+  maxTokens: number,
+  label: string,
+): Promise<string> {
+  const messages: RouterMessage[] = [{ role: "user", content: prompt }];
+  const result = await routeChat({ pool: "batch", messages, maxTokens, label });
+  return result.text;
+}
 export const PIPELINE_MARKERS: string[] = [];
 function pushMarker(m: string) {
   PIPELINE_MARKERS.push(m);
@@ -101,14 +112,13 @@ async function getVotesClaude(
   sectionTitles: string[],
   topic: string,
 ): Promise<Record<string, number>> {
-  const messages = buildChunkedMessages(doc, sectionTitles, topic);
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5",
-    max_tokens: 600,
-    messages,
-  });
-  const text = response.content[0]?.type === "text" ? response.content[0].text : "";
-  return parseVotes(text);
+  const messages = buildChunkedMessages(doc, sectionTitles, topic) as RouterMessage[];
+  try {
+    const result = await routeChat({ pool: "batch", messages, maxTokens: 600, label: "getVotesClaude" });
+    return parseVotes(result.text);
+  } catch {
+    return {};
+  }
 }
 
 async function getVotesChatGPT(
@@ -243,15 +253,11 @@ async function sintetizarResultado(
     }
   }
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5",
-    max_tokens: scaled.maxTokens,
-    messages: [{ role: "user", content: synthesisPrompt }],
-  });
-
-  return response.content[0]?.type === "text"
-    ? response.content[0].text
-    : "(síntese não disponível)";
+  try {
+    return await synthesizeWithRouter(synthesisPrompt, scaled.maxTokens, "Sintese Agora");
+  } catch {
+    return "(síntese não disponível)";
+  }
 }
 
 // ── RESULTADO (texto persistido + base do PDF) ─────────────────────────────
@@ -414,12 +420,7 @@ async function runSecretario(
     if (synthesisBunkered(bunkerMode)) {
       perfeitoText = await cerebrasComplete({ user: secretariaPrompt, maxTokens: scaledSec.maxTokens, label: "Secretário" });
     } else {
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-5",
-        max_tokens: scaledSec.maxTokens,
-        messages: [{ role: "user", content: secretariaPrompt }],
-      });
-      perfeitoText = response.content[0]?.type === "text" ? response.content[0].text : perfeitoText;
+      perfeitoText = await synthesizeWithRouter(secretariaPrompt, scaledSec.maxTokens, "Secretário");
     }
     console.log(`[Secretário] Texto PERFEITO gerado — ${perfeitoText.length} chars${tag}`);
   } catch (err) {
@@ -517,12 +518,7 @@ async function runSecretario(
     if (synthesisBunkered(bunkerMode)) {
       canvaFormatText = await cerebrasComplete({ user: canvaPrompt, maxTokens: 400, label: "Canva" });
     } else {
-      const canvaResp = await anthropic.messages.create({
-        model: "claude-sonnet-4-5",
-        max_tokens: 400,
-        messages: [{ role: "user", content: canvaPrompt }],
-      });
-      canvaFormatText = canvaResp.content[0]?.type === "text" ? canvaResp.content[0].text : null;
+      canvaFormatText = await synthesizeWithRouter(canvaPrompt, 400, "Canva");
     }
     console.log("[Secretário] Formato Canva gerado");
   } catch (err) {

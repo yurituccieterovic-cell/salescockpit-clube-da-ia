@@ -45,18 +45,17 @@ export type RouterResult = {
 };
 
 const POOLS: Record<Pool, Provider[]> = {
-  // Chat ao vivo — latência importa, prioriza Groq (mais rápido) com fallbacks rápidos.
-  // CF adicionado como fallback real: llama-3.3-70b funciona e suporta contextos grandes,
-  // resolve o problema de Groq 8000 TPM ser esgotado pelos loops de background.
-  "chat-live": ["groq", "cloudflare", "gemini", "openrouter", "cerebras"],
-  // Batch (heartbeat/devaneio/curadoria) — prefere provedores grátis sem concorrer com chat.
-  // Groq entra no final: Cerebras exige pagamento, Gemini com key inválida → Groq é o fallback real.
-  "batch": ["cloudflare", "mistral", "cerebras", "gemini", "groq"],
-  // Raciocínio profundo (Árvore programadora) — DeepSeek-V3 é forte e barato.
-  // Groq permitido aqui porque coder é triggered manualmente (Yuri aprova), não em background.
-  "coder": ["deepseek", "openrouter", "groq", "gemini"],
-  // Polish/curadoria curta — Mistral especialista. Groq no final como fallback real.
-  "curadoria": ["mistral", "cloudflare", "deepseek", "cerebras", "groq"],
+  // Chat ao vivo — Groq rápido, CF como fallback, Gemini em 3°.
+  // cerebras/openrouter removidos: 402 e 401 respectivamente (2026-10-03).
+  "chat-live": ["groq", "cloudflare", "gemini", "mistral"],
+  // Batch (síntese Ágora/Secretário) — Gemini como primário (substituiu Anthropic).
+  // Cloudflare 2°, Groq 3° — Mistral 429 intermitente mas útil como backup.
+  // cerebras (402) e deepseek (402) removidos.
+  "batch": ["gemini", "cloudflare", "groq", "mistral"],
+  // Raciocínio profundo (Árvore programadora). deepseek removido (402).
+  "coder": ["groq", "cloudflare", "gemini"],
+  // Polish/curadoria curta.
+  "curadoria": ["mistral", "cloudflare", "gemini", "groq"],
 };
 
 const MODELS: Record<Provider, string> = {
@@ -100,7 +99,8 @@ function classifyError(status: number, errText: string): string {
   // 404 (rota/modelo inexistente) e 410 (modelo desativado pelo provedor) são
   // falhas PERMANENTES de config, não transitórias — ex.: Cloudflare devolvendo
   // 410 num model id deprecado. Tratar como "dead" pra cooling longo.
-  if (status === 404 || status === 410) return "dead";
+  // 402 = pagamento exigido — conta free expirou, tratar como permanente (cooling 1h)
+  if (status === 402 || status === 404 || status === 410) return "dead";
   if (status >= 500) return "server-error";
   if (status >= 400) return "client-error";
   return "unknown";
