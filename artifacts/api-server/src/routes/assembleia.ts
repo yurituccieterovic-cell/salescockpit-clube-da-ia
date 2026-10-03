@@ -597,4 +597,25 @@ router.get("/assembleia/sessions/:id/report", requireAuthOrClube, async (req, re
   res.json(JSON.parse(session.editorialReport));
 });
 
+// POST /assembleia/test-email — AO-only, envia email teste para diagnosticar SMTP do Render
+router.post("/assembleia/test-email", requireAuth, async (_req, res) => {
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPass = process.env.GMAIL_APP_PASSWORD;
+  if (!gmailUser || !gmailPass) {
+    res.status(500).json({ error: "GMAIL_USER ou GMAIL_APP_PASSWORD não configurados", env: { GMAIL_USER: !!gmailUser, GMAIL_APP_PASSWORD: !!gmailPass } });
+    return;
+  }
+  try {
+    const transporter = nodemailer.createTransport({ service: "gmail", auth: { user: gmailUser, pass: gmailPass } });
+    await transporter.sendMail({
+      from: gmailUser, to: gmailUser,
+      subject: `TEST Assembleia SMTP — Render ${new Date().toISOString()}`,
+      text: "Email de teste enviado do Render via SalesCockpit API.",
+    });
+    res.json({ ok: true, from: gmailUser, to: gmailUser });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message, code: (err as NodeJS.ErrnoException).code });
+  }
+});
+
 export default router;
