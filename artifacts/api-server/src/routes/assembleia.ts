@@ -608,4 +608,28 @@ router.post("/assembleia/test-email", requireAuth, async (_req, res) => {
   }
 });
 
+// POST /assembleia/test-relay — testa o relay de email (debug)
+router.post("/assembleia/test-relay", requireAuth, async (_req, res) => {
+  const bridge = process.env.BRIDGE_SECRET;
+  const papApiUrl = process.env.PAP_API_URL ?? "https://site-st.onrender.com";
+  const to = process.env.GMAIL_USER ?? "luddlocke@gmail.com";
+
+  if (!bridge) {
+    res.status(500).json({ error: "BRIDGE_SECRET não configurado", bridge: !!bridge, papApiUrl });
+    return;
+  }
+
+  try {
+    const resp = await fetch(`${papApiUrl}/api/bridge/email-relay`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-bridge-secret": bridge },
+      body: JSON.stringify({ to, subject: `TEST relay via SalesCockpit ${new Date().toISOString()}`, text: "Relay test." }),
+    });
+    const body = await resp.json().catch(() => null);
+    res.json({ ok: resp.ok, status: resp.status, body, bridge: bridge.slice(0, 8) + "...", papApiUrl, to });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 export default router;
