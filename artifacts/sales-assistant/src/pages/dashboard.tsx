@@ -257,19 +257,17 @@ export default function Dashboard() {
   const gerarVideoRealRef = useRef(false);
   const { canVideo, appUser, authenticated, appLogout, refreshAppUser } = useAuth();
   const canVideoRef = useRef(false);
-  // 2026-05: toggle "Publicar" default ON (preserva comportamento histórico).
-  // Quando OFF, Secretário pula Notion + Bluesky (PERFEITO ainda vai por email).
-  const [publicarSocial, setPublicarSocial] = useState(true);
-  const publicarSocialRef = useRef(true);
+  // 2026-10: publicar desligado por padrão — PERFEITO vai só por email (sem Notion/Bluesky).
+  const [publicarSocial, setPublicarSocial] = useState(false);
+  const publicarSocialRef = useRef(false);
   // BUNKER_MODE 3-níveis (AO only): 0=padrão (Opus+pagas), 1=híbrido (vozes pagas→grátis,
   // synthesis Opus), 2=full bunker (synthesis vai Cerebras Qwen 235B). Override por run.
   const [bunkerMode, setBunkerMode] = useState<0 | 1 | 2>(0);
   const bunkerModeRef = useRef<0 | 1 | 2>(0);
   useEffect(() => { bunkerModeRef.current = bunkerMode; }, [bunkerMode]);
-  // Réplica (AO only): 2ª rodada onde as vozes reagem umas às outras. Default OFF —
-  // liga só quando o AO quer (custo: 2ª passada nas vozes, inclusive pagas).
-  const [replica, setReplica] = useState(false);
-  const replicaRef = useRef(false);
+  // Réplica (AO only): 2ª rodada onde as vozes reagem umas às outras. Default ON.
+  const [replica, setReplica] = useState(true);
+  const replicaRef = useRef(true);
   useEffect(() => { replicaRef.current = replica; }, [replica]);
   // true enquanto a 2ª rodada (réplica) está rodando — mostra aviso no header.
   const [replicaPhase, setReplicaPhase] = useState(false);
@@ -824,22 +822,6 @@ export default function Dashboard() {
                     {gerarVideoReal ? "Vídeo ON" : "Vídeo"}
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setPublicarSocial(v => !v)}
-                  disabled={isStreaming}
-                  title={publicarSocial
-                    ? "PERFEITO será postado no Notion e no Bluesky (@stuccipulseheadway) ao fim do RODAR. Clique pra rodar sem publicar (modo rascunho)."
-                    : "Modo rascunho: PERFEITO só vai por email pra luddlocke@gmail.com, NÃO posta no Notion nem Bluesky. Clique pra reativar publicação."}
-                  className={`flex items-center justify-center gap-2 text-xs sm:text-sm font-bold uppercase tracking-wider px-4 py-2 rounded-lg shadow border-2 transition-all w-full sm:w-auto sm:min-w-[160px] disabled:opacity-50 disabled:cursor-not-allowed ${
-                    publicarSocial
-                      ? "bg-emerald-600 hover:bg-emerald-700 border-emerald-700 text-white"
-                      : "bg-white hover:bg-emerald-50 border-emerald-300 text-emerald-700"
-                  }`}
-                >
-                  <Globe className="h-4 w-4" />
-                  {publicarSocial ? "Publicar ON" : "Rascunho"}
-                </button>
                 {authenticated && (
                   <select
                     value={bunkerMode}
