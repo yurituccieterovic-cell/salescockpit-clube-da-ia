@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Send, TreePine, Globe, BookOpen, Wind, Loader2, Paperclip, X, FileText, Image as ImageIcon, Copy, Check, FolderPlus, Folder, Trash2, Plus, Volume2, Square, Mic, MicOff } from "lucide-react";
+import { ArrowLeft, Send, TreePine, Globe, BookOpen, Wind, Loader2, Paperclip, X, FileText, Image as ImageIcon, Copy, Check, FolderPlus, Folder, Trash2, Plus, Volume2, Square, Mic, MicOff, Menu } from "lucide-react";
 import ProcessingPhases, { type PhaseKey } from "@/components/ProcessingPhases";
 import { useTts } from "@/lib/tts";
 import { useDictation } from "@/lib/stt";
@@ -258,6 +258,8 @@ export default function OraculoPage() {
   const selectedProject = selectedProjectId
     ? projects.find((p) => p.id === selectedProjectId) ?? null
     : null;
+
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Detecta AO (auth/me) — só AO vê biblioteca
   useEffect(() => {
@@ -803,8 +805,16 @@ export default function OraculoPage() {
     >
       {/* Sidebar: biblioteca de projetos (AO-only) */}
       {isAO && (
+        <>
+          {mobileSidebarOpen && (
+            <div
+              className="md:hidden fixed inset-0 z-40"
+              style={{ background: "rgba(0,0,0,0.6)" }}
+              onClick={() => setMobileSidebarOpen(false)}
+            />
+          )}
         <aside
-          className="w-64 shrink-0 flex flex-col"
+          className={`fixed md:static inset-y-0 left-0 z-50 w-64 shrink-0 flex flex-col transition-transform duration-200 ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
           style={{ borderRight: "1px solid #1a1a1a", background: "#0c0c0c" }}
         >
           <div
@@ -927,6 +937,7 @@ export default function OraculoPage() {
             </div>
           )}
         </aside>
+        </>
       )}
 
       {/* Modal: novo projeto */}
@@ -989,6 +1000,16 @@ export default function OraculoPage() {
         className="flex items-center gap-3 px-5 py-4 shrink-0"
         style={{ borderBottom: "1px solid #1a1a1a" }}
       >
+        {isAO && (
+          <button
+            onClick={() => setMobileSidebarOpen((v) => !v)}
+            className="md:hidden p-2 rounded-lg transition-colors"
+            style={{ color: "#c49a3c", background: mobileSidebarOpen ? "rgba(180,120,40,0.1)" : "transparent" }}
+            title="Abrir biblioteca"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        )}
         <button
           onClick={() => navigate("/app")}
           className="text-white/30 hover:text-white/70 transition-colors"
@@ -1049,7 +1070,7 @@ export default function OraculoPage() {
           >
             {msg.role === "user" ? (
               <div
-                className="max-w-xs lg:max-w-md px-5 py-3 rounded-2xl rounded-tr-sm text-sm leading-relaxed"
+                className="max-w-[85vw] sm:max-w-xs lg:max-w-md px-5 py-3 rounded-2xl rounded-tr-sm text-sm leading-relaxed"
                 style={{
                   background: "#1a1a1a",
                   color: "#8aab8a",
@@ -1067,7 +1088,7 @@ export default function OraculoPage() {
                 {msg.content}
               </div>
             ) : (
-              <div className="max-w-xl lg:max-w-2xl">
+              <div className="max-w-[92vw] sm:max-w-xl lg:max-w-2xl">
                 <p
                   className="text-sm leading-loose whitespace-pre-wrap"
                   style={{
