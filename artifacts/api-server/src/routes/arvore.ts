@@ -906,10 +906,10 @@ Use o material acima quando relevante. Se a pergunta não estiver coberta pelo m
     });
   } catch {}
 
-  // Budget contexto automático: gpt-oss-120b tem 8000 TPM. System base ~3500 tok +
-  // contexto + histórico deve ficar < 7500 tok total (~30k chars total disponível).
-  // Contexto: 8000 chars → ~2000 tok. Histórico: 8000 chars → ~2000 tok. Soma: ~7500.
-  const MAX_CONTEXT_CHARS = 8000;
+  // Groq free 8000 TPM. System base ~3500 tok. Dois requests seguidos batem no limite
+  // com contexto+histórico grandes. Reduzido para ~1000 tok cada → total ~5500/req.
+  // Dois requests = 11000 tokens/min — ainda apertado mas não quebra na 2ª msg.
+  const MAX_CONTEXT_CHARS = 4000;
   // Corte POR PRIORIDADE: acumula bloco a bloco na ordem montada acima (mais importante
   // primeiro). Quando um bloco não cabe inteiro, trunca SÓ ele (se sobrar espaço útil) e
   // para — assim os blocos iniciais (recalls da pergunta + memória sempre-presente)
@@ -936,9 +936,9 @@ Use o material acima quando relevante. Se a pergunta não estiver coberta pelo m
     const attachBlock = "─── ANEXOS DO USUÁRIO (processados localmente) ───\n" + parts.join("\n\n───\n\n");
     joined = joined ? `${joined}\n\n${attachBlock}` : attachBlock;
   }
-  // Histórico: orçamento reduzido para 8k chars para caber no limite de 8000 TPM.
+  // Histórico: 4k chars (~1000 tok) para não explodir o TPM em conversas longas.
   let histChars = 0;
-  const histBudget = 8_000;
+  const histBudget = 4_000;
   const trimmedHistory: { role: string; content: string }[] = [];
   for (let i = history.length - 1; i >= 0; i--) {
     const h = history[i]!;
