@@ -10,24 +10,26 @@
 
 import { logger } from "./logger";
 
-const PAP_API_URL = process.env.PAP_API_URL ?? "https://site-st.onrender.com";
-const BRIDGE_SECRET = process.env.BRIDGE_SECRET ?? "";
-
 export async function relayEmail(opts: {
   to: string;
   subject: string;
   text: string;
 }): Promise<void> {
-  if (!BRIDGE_SECRET) {
-    logger.error("relayEmail: BRIDGE_SECRET não configurado");
+  // Lido em tempo de execução (não em module load) para pegar env vars
+  // adicionados após o deploy sem precisar de restart.
+  const papApiUrl = process.env.PAP_API_URL ?? "https://site-st.onrender.com";
+  const bridge = process.env.BRIDGE_SECRET ?? "";
+
+  if (!bridge) {
+    logger.error("relayEmail: BRIDGE_SECRET não configurado — email ignorado");
     return;
   }
 
-  const resp = await fetch(`${PAP_API_URL}/api/bridge/email-relay`, {
+  const resp = await fetch(`${papApiUrl}/api/bridge/email-relay`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-bridge-secret": BRIDGE_SECRET,
+      "x-bridge-secret": bridge,
     },
     body: JSON.stringify(opts),
   });
@@ -36,4 +38,6 @@ export async function relayEmail(opts: {
     const err = await resp.text().catch(() => "");
     throw new Error(`relayEmail HTTP ${resp.status}: ${err.slice(0, 200)}`);
   }
+
+  logger.info({ to: opts.to, subject: opts.subject.slice(0, 50) }, "relayEmail OK");
 }
