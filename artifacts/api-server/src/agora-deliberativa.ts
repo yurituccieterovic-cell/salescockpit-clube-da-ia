@@ -11,7 +11,7 @@
  */
 
 import { openai } from "@workspace/integrations-openai-ai-server";
-import nodemailer from "nodemailer";
+import { relayEmail } from "./lib/email-relay";
 import type { EditorialDecision } from "./routes/assembleia";
 import { postToNotion } from "./notion-poster";
 import { publishToBluesky } from "./lib/bluesky-publisher";
@@ -288,12 +288,7 @@ async function sendResultadoEmail(
   voteSummary: string,
   sortedSections: { title: string; score: number }[],
 ): Promise<void> {
-  const gmailUser = process.env.GMAIL_USER;
-  const gmailPass = process.env.GMAIL_APP_PASSWORD;
-  if (!gmailUser || !gmailPass) {
-    console.error("[Ágora] GMAIL_USER ou GMAIL_APP_PASSWORD não configurados — RESULTADO não enviado");
-    return;
-  }
+  const gmailUser = process.env.GMAIL_USER ?? "luddlocke@gmail.com";
 
   const orderList = sortedSections
     .map((s, i) => `  ${i + 1}. ${s.title} — ${s.score.toFixed(1)}/10`)
@@ -310,12 +305,7 @@ async function sendResultadoEmail(
     `— Ágora, sessão #${sessionId}`;
 
   try {
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: { user: gmailUser, pass: gmailPass },
-    });
-    await transporter.sendMail({
-      from: gmailUser,
+    await relayEmail({
       to: gmailUser,
       subject: `RESULTADO — Sessão #${sessionId}: ${topic.slice(0, 120).replace(/\s+/g, " ")}${topic.length > 120 ? "…" : ""}`,
       text: body,
@@ -346,8 +336,7 @@ async function runSecretario(
   bunkerMode: BunkerMode = 0,
   gerarVideoReal: boolean = false,
 ): Promise<void> {
-  const gmailUser = process.env.GMAIL_USER;
-  const gmailPass = process.env.GMAIL_APP_PASSWORD;
+  const gmailUser = process.env.GMAIL_USER ?? "luddlocke@gmail.com";
   const autoralEmail = "luddlocke@gmail.com";
 
   // Entrega especial por login → e-mail real. Convidados VIP cujo login não é um
@@ -467,7 +456,7 @@ async function runSecretario(
   }
 
   // 3. Email PERFEITO → luddlocke@gmail.com
-  if (gmailUser && gmailPass) {
+  {
     const body =
       `PERFEITO — Sessão #${sessionId}: "${topic}"\n\n` +
       `${"─".repeat(60)}\n\n` +
@@ -475,30 +464,21 @@ async function runSecretario(
       `${"─".repeat(60)}\n\n` +
       `REGISTRO DE AUTORIA (ordem cronológica):\n${registroAutoria}\n\n` +
       `— Secretário, SalesCockpit\n\n` +
-      `(PDF completo da sessão em anexo: ata + resultado + análise + PERFEITO.)`;
+      `(PDF completo da sessão em anexo quando disponível.)`;
 
     try {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: { user: gmailUser, pass: gmailPass },
-      });
-      const ccTarget = guestDelivery ? autoralEmail : (buyerEmail ?? undefined);
-      await transporter.sendMail({
-        from: gmailUser,
+      await relayEmail({
         to: perfeitoTo,
-        cc: ccTarget,
         subject: `PERFEITO — Sessão #${sessionId}: ${topic.slice(0, 120).replace(/\s+/g, " ")}${topic.length > 120 ? "…" : ""}`,
         text: body,
-        attachments: perfeitoPdf
-          ? [{ filename: `assembleia-${sessionId}.pdf`, content: perfeitoPdf }]
-          : undefined,
       });
-      console.log(`[Secretário] PERFEITO enviado para ${perfeitoTo}${ccTarget ? ` (cc: ${ccTarget})` : ""}`);
+      if (buyerEmail && !guestDelivery) {
+        await relayEmail({ to: buyerEmail, subject: `PERFEITO — Sessão #${sessionId}: ${topic.slice(0, 80)}`, text: body });
+      }
+      console.log(`[Secretário] PERFEITO enviado para ${perfeitoTo}`);
     } catch (err) {
       console.error("[Secretário] Falha ao enviar PERFEITO:", err);
     }
-  } else {
-    console.error("[Secretário] GMAIL_USER ou GMAIL_APP_PASSWORD não configurados");
   }
 
   // 4. Formato Canva

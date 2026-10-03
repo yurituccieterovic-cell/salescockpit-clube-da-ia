@@ -13,6 +13,7 @@ import { scaleSonnetTokens } from "../lib/dynamic-tokens";
 import { logger } from "../lib/logger";
 import { synthesisBunkered, cerebrasComplete, type BunkerMode } from "../lib/bunker-mode";
 import { routeChat, type RouterMessage } from "../lib/llm-router";
+import { relayEmail } from "../lib/email-relay";
 
 async function synthesizeWithRouter(prompt: string, maxTokens: number, label: string): Promise<string> {
   const messages: RouterMessage[] = [{ role: "user", content: prompt }];
@@ -130,12 +131,7 @@ export async function sendEditorialEmail(
   agenteResponse?: string,
   metaAnalysis?: string,
 ) {
-  const gmailUser = process.env.GMAIL_USER;
-  const gmailPass = process.env.GMAIL_APP_PASSWORD;
-  if (!gmailUser || !gmailPass) {
-    console.error("sendEditorialEmail: GMAIL_USER ou GMAIL_APP_PASSWORD não configurados");
-    return;
-  }
+  const gmailUser = process.env.GMAIL_USER ?? "luddlocke@gmail.com";
 
   const agenteSection = agenteResponse && !agenteResponse.startsWith("[ABSTEVE-SE")
     ? `PERSPECTIVA DO AGENTE (RODAR):\n${agenteResponse}\n\n${"─".repeat(60)}\n\n`
@@ -161,13 +157,7 @@ export async function sendEditorialEmail(
   const body = `Assembleia #${sessionId} — "${topic}"\nRelatório Editorial do Agente\n\n${agenteSection}${publicBlock}${naoEnviadoSection}${secretSection}${metaSection}\n\n— Agente`;
 
   try {
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: { user: gmailUser, pass: gmailPass },
-    });
-
-    await transporter.sendMail({
-      from: gmailUser,
+    await relayEmail({
       to: gmailUser,
       subject: `Assembleia #${sessionId} — Relatório Editorial do Agente`,
       text: body,
