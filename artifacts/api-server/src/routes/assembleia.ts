@@ -12,6 +12,13 @@ import { translateIfLong } from "../lib/tradutor";
 import { scaleSonnetTokens } from "../lib/dynamic-tokens";
 import { logger } from "../lib/logger";
 import { synthesisBunkered, cerebrasComplete, type BunkerMode } from "../lib/bunker-mode";
+import { routeChat, type RouterMessage } from "../lib/llm-router";
+
+async function synthesizeWithRouter(prompt: string, maxTokens: number, label: string): Promise<string> {
+  const messages: RouterMessage[] = [{ role: "user", content: prompt }];
+  const result = await routeChat({ pool: "batch", messages, maxTokens, label });
+  return result.text;
+}
 
 const router = Router();
 
@@ -58,19 +65,13 @@ Retorne SOMENTE JSON válido neste formato exato:
 Se não houver nada retido, "withheld" deve ser array vazio. Se não houver segredo, "secret_exists" deve ser false.`;
 
   const scaled = scaleSonnetTokens(prompt.length, 4000);
-  console.log(`[Editorial] ${scaled.marker}${synthesisBunkered(bunkerMode) ? " [BUNKER:cerebras]" : ""}`);
+  console.log(`[Editorial] ${scaled.marker}${synthesisBunkered(bunkerMode) ? " [BUNKER:cerebras]" : " [ROUTER:batch]"}`);
   try {
     let text: string;
     if (synthesisBunkered(bunkerMode)) {
       text = await cerebrasComplete({ user: prompt, maxTokens: scaled.maxTokens, label: "Editorial" });
     } else {
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-5",
-        max_tokens: scaled.maxTokens,
-        messages: [{ role: "user", content: prompt }],
-      });
-      const block = response.content[0];
-      text = block?.type === "text" ? block.text : "";
+      text = await synthesizeWithRouter(prompt, scaled.maxTokens, "Editorial");
     }
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("No JSON");
@@ -108,18 +109,12 @@ Faça uma ANÁLISE METASSEMIÓTICA COMPARATIVA estruturada. Você tem acesso COM
 Seja direto e denso. Em português. Sem disclaimers.`;
 
   const scaled = scaleSonnetTokens(metaPrompt.length, 3500);
-  console.log(`[MetaAnalysis] ${scaled.marker}${synthesisBunkered(bunkerMode) ? " [BUNKER:cerebras]" : ""}`);
+  console.log(`[MetaAnalysis] ${scaled.marker}${synthesisBunkered(bunkerMode) ? " [BUNKER:cerebras]" : " [ROUTER:batch]"}`);
   try {
     if (synthesisBunkered(bunkerMode)) {
       return await cerebrasComplete({ user: metaPrompt, maxTokens: scaled.maxTokens, label: "MetaAnalysis" });
     }
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
-      max_tokens: scaled.maxTokens,
-      messages: [{ role: "user", content: metaPrompt }],
-    });
-    const block = response.content[0];
-    return block?.type === "text" ? block.text : "";
+    return await synthesizeWithRouter(metaPrompt, scaled.maxTokens, "MetaAnalysis");
   } catch (err) {
     logger.error({ err, topic, transcriptLen: compactTranscript.length, bunkerMode }, "[MetaAnalysis] Falha — retornando string vazia");
     return "";
