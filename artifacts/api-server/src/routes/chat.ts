@@ -1538,11 +1538,10 @@ router.get("/rodar/stream", requireRodarAccess, async (req, res) => {
     void getTradutorSummary();
   }
 
-  // Timeout por voz na 1ª rodada: igual ao da réplica mas um pouco mais longo
-  // (a 1ª rodada roda 4 vozes em paralelo, a réplica roda sequencialmente).
-  // Sem este timeout, uma voz que pendurar (fetch sem timeout no groq-retry)
-  // segura a onda inteira indefinidamente e a sessão trava após a 1ª onda.
-  const VOICE_TIMEOUT_MS = 120_000;
+  // Timeout por voz na 1ª rodada. groq-retry agora aborta o fetch em 45s;
+  // este timeout é o safety net caso o AbortSignal não propague (stream mode,
+  // fallback chain, etc.). 60s > 45s dá margem pro fallback completar.
+  const VOICE_TIMEOUT_MS = 60_000;
 
   // Build stream task for one AI based on its strategy.
   // Auto-fallback: se isLong e a tentativa principal falhar SEM produzir conteúdo, pede

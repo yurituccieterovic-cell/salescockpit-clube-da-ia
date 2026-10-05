@@ -334,6 +334,11 @@ export async function fetchGroqChat(body: unknown, label = "groq"): Promise<Resp
     return fb ?? exhaustedResponse();
   }
 
+  // Timeout explícito: sem AbortSignal um TCP hang nunca resolve — deixa a onda
+  // do RODAR pendurada até o timer de 120s do buildTask. Com 45s, a conexão é
+  // abortada na raiz e o cooling propaga pro próximo fallback mais rápido.
+  const GROQ_FETCH_TIMEOUT_MS = 45_000;
+
   const init: RequestInit = {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -342,7 +347,22 @@ export async function fetchGroqChat(body: unknown, label = "groq"): Promise<Resp
 
   let attempt = 0;
   while (true) {
-    const res = await fetch(GROQ_URL, init);
+    const ac = new AbortController();
+    const fetchTimer = setTimeout(() => ac.abort(), GROQ_FETCH_TIMEOUT_MS);
+    let res: Response;
+    try {
+      res = await fetch(GROQ_URL, { ...init, signal: ac.signal });
+    } catch (fetchErr) {
+      clearTimeout(fetchTimer);
+      if ((fetchErr as Error).name === "AbortError") {
+        logger.warn({ label, attempt }, "[groq-retry] fetch timeout, indo pro fallback");
+        reportProviderFailure("groq", 504, "fetch timeout");
+        const fb = await runFreeFallbackChain(body as GroqBody, label);
+        return fb ?? exhaustedResponse();
+      }
+      throw fetchErr;
+    }
+    clearTimeout(fetchTimer);
     if (res.status === 401 || res.status === 403 || res.status === 404) {
       const errText = await res.text().catch(() => "");
       reportProviderFailure("groq", res.status, errText);
