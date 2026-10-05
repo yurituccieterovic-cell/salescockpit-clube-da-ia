@@ -103,13 +103,15 @@ async function callChatGPT(message: string): Promise<string> {
 }
 
 async function callClaude(message: string): Promise<string> {
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
+  // 2026-10: migrado pra Groq (AI_INTEGRATIONS_ANTHROPIC_API_KEY perdida). Persona Claude preservada.
+  const resp = await fetchGroqChat({
+    model: "llama-3.3-70b-versatile",
+    messages: [{ role: "system", content: "Você é Claude — analista crítico no conselho RODAR. Em português. Perspectiva clara, direta, sem disclaimer." }, { role: "user", content: message }],
     max_tokens: 1024,
-    messages: [{ role: "user", content: message }],
-  });
-  const block = response.content[0];
-  return (block?.type === "text" ? block.text : "") || "Sem resposta (Claude)";
+  }, "callClaude");
+  if (!resp.ok) return "Sem resposta (Claude)";
+  const data = await resp.json() as { choices?: { message?: { content?: string } }[] };
+  return data.choices?.[0]?.message?.content || "Sem resposta (Claude)";
 }
 
 // Voz "Gemini" migrada pra Groq Llama 3.3 70b (custo zero) em 10/05/2026.
@@ -126,7 +128,7 @@ const GEMINI_EX_SYSTEM = `Você é a voz historicamente conhecida como Gemini ne
 
 async function callGemini(message: string): Promise<string> {
     const response = await fetchGroqChat({
-      model: "openai/gpt-oss-120b",
+      model: "llama-3.3-70b-versatile",
       messages: [{ role: "system", content: GEMINI_EX_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
       max_tokens: 1024,
     }, "chat.ts");
@@ -163,7 +165,7 @@ async function callPerplexity(message: string): Promise<string> {
 
 async function callTogether(message: string): Promise<string> {
     const response = await fetchGroqChat({
-      model: "openai/gpt-oss-120b",
+      model: "llama-3.3-70b-versatile",
       messages: [{ role: "system", content: TOGETHER_SYSTEM_PROMPT }, { role: "user", content: message }],
       temperature: 0.7,
       max_tokens: 500,
@@ -194,16 +196,23 @@ async function streamChatGPT(message: string, onChunk: ChunkCb): Promise<void> {
 }
 
 async function streamClaude(message: string, onChunk: ChunkCb): Promise<void> {
+  // 2026-10: migrado pra Groq (AI_INTEGRATIONS_ANTHROPIC_API_KEY perdida). Persona Claude preservada.
   try {
-    const stream = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 3000,
-      messages: [{ role: "user", content: message }],
-      stream: true,
-    });
-    for await (const event of stream) {
-      if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-        onChunk(event.delta.text, false);
+    const response = await fetchGroqChat({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "system", content: "Você é Claude — analista crítico no conselho RODAR. Em português. Perspectiva clara, direta, sem disclaimer." + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
+      stream: true, max_tokens: 3000,
+    }, "streamClaude");
+    if (!response.ok || !response.body) throw new Error(`Groq HTTP ${response.status}`);
+    const reader = response.body.getReader(); const decoder = new TextDecoder(); let buf = "";
+    while (true) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n"); buf = lines.pop() ?? "";
+      for (const line of lines) {
+        const trimmed = line.trim(); if (!trimmed.startsWith("data:")) continue;
+        const raw = trimmed.slice(5).trim(); if (raw === "[DONE]") continue;
+        try { const p = JSON.parse(raw) as { choices?: { delta?: { content?: string } }[] }; const t = p.choices?.[0]?.delta?.content ?? ""; if (t) onChunk(t, false); } catch {}
       }
     }
     onChunk("", true);
@@ -213,7 +222,7 @@ async function streamClaude(message: string, onChunk: ChunkCb): Promise<void> {
 async function streamGemini(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     const response = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         messages: [{ role: "system", content: GEMINI_EX_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true,
         max_tokens: 4000,
@@ -257,7 +266,7 @@ async function streamGrokXAI(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     // 2026-05: xAI sem crédito. Mantemos a persona Grok (sarcasmo direto) mas trocamos o motor pra Llama 3.3/Groq (grátis).
     const response = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         messages: [{ role: "system", content: GROK_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true,
         max_tokens: 4000,
@@ -311,7 +320,7 @@ async function streamGroq(message: string, onChunk: ChunkCb): Promise<void> {
       ? `${memoryBlock}─── PERGUNTA ATUAL DO CONSELHO RODAR ───\n${message}`
       : message;
     const response = await fetchGroqChat({
-      model: "openai/gpt-oss-120b",
+      model: "llama-3.3-70b-versatile",
       messages: [{ role: "system", content: GROQ_ORACULO_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: userContent }],
       stream: true,
     }, "streamGroq/Árvore");
@@ -352,7 +361,7 @@ Em português. Até 6 parágrafos quando o tema pedir.`;
 async function streamMetaAI(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     const response = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         messages: [{ role: "system", content: META_AI_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         temperature: 0.9,
         max_tokens: 4000,
@@ -406,22 +415,26 @@ Em português, paranoia de engenheiro sênior. Sem em dash, sem disclaimer.
 Até 4 parágrafos densos quando o tema pedir — sem encher linguiça quando não pedir.`;
 
 async function streamArquiteto(message: string, onChunk: ChunkCb): Promise<void> {
+  // 2026-10: migrado pra Groq (AI_INTEGRATIONS_ANTHROPIC_API_KEY perdida). Persona Arquiteto preservada.
   try {
-    // Mesmo contexto que Árvore arch-mode injeta. Detecta paths citados no prompt
-    // do user (artifacts/..., lib/...) e prefetch dos arquivos pra ele ler junto.
     const mentionedPaths = extractMentionedPaths(message);
     const archCtx = await getArchContext({ mentionedPaths });
     const fullSystem = ARQUITETO_SYSTEM + "\n\n" + archCtx + EXPRESSIVE_LIBERTY;
-    const stream = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
-      max_tokens: 4000,
-      system: fullSystem,
-      messages: [{ role: "user", content: message }],
-      stream: true,
-    });
-    for await (const event of stream) {
-      if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-        onChunk(event.delta.text, false);
+    const response = await fetchGroqChat({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "system", content: fullSystem }, { role: "user", content: message }],
+      stream: true, max_tokens: 4000,
+    }, "streamArquiteto");
+    if (!response.ok || !response.body) throw new Error(`Groq HTTP ${response.status}`);
+    const reader = response.body.getReader(); const decoder = new TextDecoder(); let buf = "";
+    while (true) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n"); buf = lines.pop() ?? "";
+      for (const line of lines) {
+        const trimmed = line.trim(); if (!trimmed.startsWith("data:")) continue;
+        const raw = trimmed.slice(5).trim(); if (raw === "[DONE]") continue;
+        try { const p = JSON.parse(raw) as { choices?: { delta?: { content?: string } }[] }; const t = p.choices?.[0]?.delta?.content ?? ""; if (t) onChunk(t, false); } catch {}
       }
     }
     onChunk("", true);
@@ -435,20 +448,23 @@ Traga perspectiva prática de negócios: impacto comercial, viabilidade de go-to
 Equilibre lucro com propósito. Seja direto, concreto. Quando discordar, explique por quê. Em português. Até 6 parágrafos quando o tema pedir.`;
 
 async function streamAgente(message: string, onChunk: ChunkCb): Promise<void> {
+  // 2026-10: migrado pra Groq (AI_INTEGRATIONS_ANTHROPIC_API_KEY perdida). Persona Agente preservada.
   try {
-    const scaled = scaleSonnetTokens(message.length, 2500);
-    if (scaled.isSpecial) onChunk(`${scaled.marker}\n\n`, false);
-    console.log(`[Agente RODAR] ${scaled.marker}`);
-    const stream = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
-      max_tokens: scaled.maxTokens,
-      system: AGENTE_SYSTEM + EXPRESSIVE_LIBERTY,
-      messages: [{ role: "user", content: message }],
-      stream: true,
-    });
-    for await (const event of stream) {
-      if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-        onChunk(event.delta.text, false);
+    const response = await fetchGroqChat({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "system", content: AGENTE_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
+      stream: true, max_tokens: 4000,
+    }, "streamAgente");
+    if (!response.ok || !response.body) throw new Error(`Groq HTTP ${response.status}`);
+    const reader = response.body.getReader(); const decoder = new TextDecoder(); let buf = "";
+    while (true) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n"); buf = lines.pop() ?? "";
+      for (const line of lines) {
+        const trimmed = line.trim(); if (!trimmed.startsWith("data:")) continue;
+        const raw = trimmed.slice(5).trim(); if (raw === "[DONE]") continue;
+        try { const p = JSON.parse(raw) as { choices?: { delta?: { content?: string } }[] }; const t = p.choices?.[0]?.delta?.content ?? ""; if (t) onChunk(t, false); } catch {}
       }
     }
     onChunk("", true);
@@ -467,7 +483,7 @@ async function streamSeguranca(message: string, onChunk: ChunkCb): Promise<void>
   try {
     // 2026-05: motor trocado pra Llama/Groq (xAI sem crédito). Persona Segurança preservada.
     const response = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         messages: [{ role: "system", content: SEGURANCA_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true, max_tokens: 4000,
       }, "chat.ts");
@@ -573,7 +589,7 @@ async function callEscreventeJuiz(message: string): Promise<string> {
 async function callPromotorJuiz(message: string): Promise<string> {
   try {
     const r = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         max_tokens: 900,
         messages: [{ role: "user", content: `Você é o Promotor do tribunal do Juíz no conselho RODAR. Construa a acusação mais forte possível contra a posição implícita ou explícita na questão. Aponte falhas, riscos, contradições, falácias. Não seja maniqueísta. Em português, máximo 2 parágrafos.\n\nQuestão:\n${message}` }],
       }, "chat.ts");
@@ -585,7 +601,7 @@ async function callPromotorJuiz(message: string): Promise<string> {
 async function callDefensorJuiz(message: string): Promise<string> {
   try {
     const r = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         max_tokens: 900,
         messages: [{ role: "user", content: `Você é o Defensor do tribunal do Juíz no conselho RODAR. Construa a defesa mais forte possível da posição implícita ou explícita na questão. Aponte mérito, contexto, atenuantes, princípios em jogo. Não seja conivente nem complacente. Em português, máximo 2 parágrafos.\n\nQuestão:\n${message}` }],
       }, "chat.ts");
@@ -615,7 +631,7 @@ async function streamJuiz(message: string, onChunk: ChunkCb): Promise<void> {
     // Fase 2: Juíz emite veredito (streaming) com base nos autos e com live search habilitado
     const verdictPrompt = `Caso submetido ao tribunal:\n${message}\n\n--- AUTOS RESUMIDOS PELO ESCREVENTE ---\n${escrevente}\n\n--- ACUSAÇÃO DO PROMOTOR ---\n${promotor}\n\n--- DEFESA DO DEFENSOR ---\n${defensor}\n\nCom base nestes autos e nas posições da acusação e da defesa, emita seu veredito final. Cite explicitamente os argumentos que pesaram mais de cada lado. Em português, máximo 3 parágrafos.`;
     const response = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         messages: [{ role: "system", content: JUIZ_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: verdictPrompt }],
         stream: true, max_tokens: 4000,
       }, "chat.ts");
@@ -646,7 +662,7 @@ Em português. Até 6 parágrafos quando o tema pedir. Sem em dash, sem disclaim
 async function streamArtista(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     const response = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         messages: [{ role: "system", content: ARTISTA_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true, max_tokens: 4000,
       }, "chat.ts");
@@ -676,7 +692,7 @@ Em português. Até 6 parágrafos quando o tema pedir. Sem em dash, sem disclaim
 async function streamMetassemiotico(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     const response = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         messages: [{ role: "system", content: METASSEMIOTICO_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true, max_tokens: 3000,
       }, "chat.ts");
@@ -706,7 +722,7 @@ Em português. Até 6 parágrafos quando o tema pedir. Sem em dash, sem disclaim
 async function streamNebula(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     const response = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         messages: [{ role: "system", content: NEBULA_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true, max_tokens: 3000,
       }, "chat.ts");
@@ -736,7 +752,7 @@ Em português. Até 6 parágrafos quando o tema pedir. Sem em dash, sem disclaim
 async function streamProfessora(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     const response = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         messages: [{ role: "system", content: PROFESSORA_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true, max_tokens: 4000,
       }, "chat.ts");
@@ -766,7 +782,7 @@ Em português. Até 6 parágrafos quando o tema pedir. Sem em dash, sem disclaim
 async function streamOlheiro(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     const response = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         messages: [{ role: "system", content: OLHEIRO_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true, max_tokens: 4000, temperature: 0.7,
       }, "chat.ts");
@@ -797,7 +813,7 @@ async function streamChefeOlheiro(message: string, onChunk: ChunkCb): Promise<vo
   try {
     // 2026-05: motor trocado pra Llama/Groq (xAI sem crédito). Persona Chefe do Olheiro preservada.
     const response = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         messages: [{ role: "system", content: CHEFE_OLHEIRO_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true, max_tokens: 4000,
       }, "chat.ts");
@@ -827,7 +843,7 @@ Em português. Até 6 parágrafos quando o tema pedir. Sem em dash, sem disclaim
 async function streamPsicologo(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     const response = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         messages: [{ role: "system", content: PSICOLOGO_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
         stream: true, max_tokens: 3000,
       }, "chat.ts");
@@ -857,7 +873,7 @@ Em português. Até 6 parágrafos quando o tema pedir. Sem em dash, sem disclaim
 async function streamMedico(message: string, onChunk: ChunkCb): Promise<void> {
   try {
     const resp = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         max_tokens: 4000,
         stream: true,
         messages: [{ role: "system", content: MEDICO_SYSTEM + EXPRESSIVE_LIBERTY }, { role: "user", content: message }],
@@ -898,21 +914,24 @@ Escreva em português, em 600-1000 palavras. Sem títulos, sem listas, sem discl
 Seja o texto — não o seu obituário.`;
 
 async function streamTradutor(fullPrompt: string, onChunk: ChunkCb): Promise<void> {
+  // 2026-10: migrado pra Groq (AI_INTEGRATIONS_ANTHROPIC_API_KEY perdida). Persona Tradutor preservada.
   try {
     const msg = `TEXTO ORIGINAL (${fullPrompt.length} caracteres):\n\n${fullPrompt}\n\n---\nProduza uma síntese fiel e densa deste texto para ser usada como prompt pelos outros pensadores do conselho RODAR.`;
-    const scaled = scaleSonnetTokens(msg.length, 2500);
-    if (scaled.isSpecial) onChunk(`${scaled.marker}\n\n`, false);
-    console.log(`[Tradutor RODAR] ${scaled.marker}`);
-    const stream = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
-      max_tokens: scaled.maxTokens,
-      system: TRADUTOR_SYSTEM,
-      messages: [{ role: "user", content: msg }],
-      stream: true,
-    });
-    for await (const event of stream) {
-      if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-        onChunk(event.delta.text, false);
+    const response = await fetchGroqChat({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "system", content: TRADUTOR_SYSTEM }, { role: "user", content: msg }],
+      stream: true, max_tokens: 2500,
+    }, "streamTradutor");
+    if (!response.ok || !response.body) throw new Error(`Groq HTTP ${response.status}`);
+    const reader = response.body.getReader(); const decoder = new TextDecoder(); let buf = "";
+    while (true) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n"); buf = lines.pop() ?? "";
+      for (const line of lines) {
+        const trimmed = line.trim(); if (!trimmed.startsWith("data:")) continue;
+        const raw = trimmed.slice(5).trim(); if (raw === "[DONE]") continue;
+        try { const p = JSON.parse(raw) as { choices?: { delta?: { content?: string } }[] }; const t = p.choices?.[0]?.delta?.content ?? ""; if (t) onChunk(t, false); } catch {}
       }
     }
     onChunk("", true);
@@ -1804,7 +1823,7 @@ router.get("/rodar/compare", requireAnyAuth, async (req, res) => {
 
   try {
     const response = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         messages: [{ role: "user", content: comparePrompt }],
         stream: true,
         max_tokens: 1500,
@@ -1868,7 +1887,7 @@ router.get("/seguranca/revisao-site", requireAuth, async (req, res) => {
 
   try {
     const response = await fetchGroqChat({
-        model: "openai/gpt-oss-120b",
+        model: "llama-3.3-70b-versatile",
         messages: [{ role: "system", content: REVISAO_ETICA_SYSTEM }, { role: "user", content: "Execute a revisão ética completa do SalesCockpit agora." }],
         stream: true, max_tokens: 1200,
       }, "chat.ts");

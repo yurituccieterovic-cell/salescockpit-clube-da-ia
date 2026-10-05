@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Network, Check, AlertCircle } from "lucide-react";
 import { getVoiceVisual } from "@/lib/voice-skins";
@@ -50,9 +50,12 @@ export function NucleoOrbital({
 
   const total = nodes.length;
   const innerCount = Math.ceil(total / 2);
+  const [tappedLabel, setTappedLabel] = useState<string | null>(null);
 
   return (
-    <div className="relative rounded-xl bg-slate-950 overflow-hidden text-slate-200 border border-white/10 h-[60vh] min-h-[480px] flex items-center justify-center">
+    <div className="relative rounded-xl bg-slate-950 overflow-hidden text-slate-200 border border-white/10 h-[60vh] min-h-[360px] max-h-[600px] flex items-center justify-center"
+      onClick={() => setTappedLabel(null)}
+    >
       <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-900/20 via-slate-950 to-slate-950" />
       <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_20%,transparent_100%)]" />
 
@@ -104,12 +107,14 @@ export function NucleoOrbital({
           </div>
         </motion.div>
 
-        <div className="absolute rounded-full border border-slate-800/50 w-[320px] h-[320px]" />
-        <div className="absolute rounded-full border border-slate-800/40 w-[520px] h-[520px]" />
+        <div className="absolute rounded-full border border-slate-800/50" style={{ width: "min(320px, 60vw)", height: "min(320px, 60vw)" }} />
+        <div className="absolute rounded-full border border-slate-800/40" style={{ width: "min(520px, 88vw)", height: "min(520px, 88vw)" }} />
 
         {nodes.map(({ card, status, waiting, color, Icon, snippet, hasReplica, replicaStreaming, replicaSnippet }, index) => {
           const isOuter = index >= innerCount;
-          const orbitRadius = isOuter ? 260 : 160;
+          const baseInner = 160; const baseOuter = 260;
+          const scale = typeof window !== "undefined" ? Math.min(1, (window.innerWidth * 0.42) / baseOuter) : 1;
+          const orbitRadius = (isOuter ? baseOuter : baseInner) * scale;
           const orbitItemsCount = isOuter ? total - innerCount : innerCount;
           const orbitIndex = isOuter ? index - innerCount : index;
           const angle = (orbitIndex / Math.max(orbitItemsCount, 1)) * Math.PI * 2;
@@ -142,7 +147,9 @@ export function NucleoOrbital({
               animate={{ x, y, opacity: waiting ? 0.4 : 1 }}
               transition={{ duration: 2, delay: index * 0.05, type: "spring", stiffness: 50 }}
             >
-              <div className="relative group flex items-center justify-center">
+              <div className="relative flex items-center justify-center"
+                onClick={(e) => { e.stopPropagation(); setTappedLabel(tappedLabel === card.label ? null : card.label); }}
+              >
                 {isTalking && (
                   <svg
                     className="absolute pointer-events-none"
@@ -222,10 +229,11 @@ export function NucleoOrbital({
                 </motion.div>
 
                 <div
-                  className={`absolute pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50
-                    ${x > 0 ? "left-full ml-4" : "right-full mr-4"}
-                    ${y > 0 ? "top-full mt-2" : "bottom-full mb-2"}
-                    w-48 bg-slate-900/90 backdrop-blur border border-slate-700 p-3 rounded-xl shadow-2xl`}
+                  className={`absolute z-50 transition-opacity duration-200 pointer-events-none
+                    ${x > 0 ? "left-full ml-3" : "right-full mr-3"}
+                    ${y > 0 ? "top-0" : "bottom-0"}
+                    w-44 bg-slate-900/95 backdrop-blur border border-slate-700 p-2.5 rounded-xl shadow-2xl
+                    ${tappedLabel === card.label ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
