@@ -236,6 +236,8 @@ export default function Dashboard() {
   const [bgContinued, setBgContinued] = useState(false);
   // Onda atual do fan-out das vozes (rodam em grupos pra aliviar o limite por minuto).
   const [waveInfo, setWaveInfo] = useState<{ wave: number; total: number } | null>(null);
+  // Auto-split: quando o prompt > 20k, backend parte em múltiplas assembleias sequenciais.
+  const [splitInfo, setSplitInfo] = useState<{ current: number; total: number } | null>(null);
   const cardsRef = useRef<AiCardState[]>(AI_CONFIG.map(c => ({ label: c.label, text: "", streaming: false, done: false, error: false })));
   const [cards, setCards] = useState<AiCardState[]>(cardsRef.current);
   const [strategies, setStrategies] = useState<Record<string, Strategy>>(Object.fromEntries(AI_CONFIG.map(c => [c.label, "partes" as Strategy])));
@@ -419,9 +421,13 @@ export default function Dashboard() {
     setPipelineError(null);
     setComparePhase("idle");
     setCompareText("");
+    setSplitInfo(null);
 
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     let streamUrl: string;
+    // Auto-split state: queue de runIds restantes + total de partes (local por invocação)
+    let splitQueue: string[] = [];
+    let splitTotalParts = 1;
 
     // gerarVideo precisa passar pelo prepare (single source pra propagar pro pipeline).
     // Lemos via ref pq runRodar é useCallback([fetchHistory]) — sem refs, gerarVideo/canVideo
@@ -472,15 +478,20 @@ export default function Dashboard() {
           }
           return;
         }
-        const { runId } = await prepResp.json() as { runId: string };
-        if (!runId) {
+        const prepData = await prepResp.json() as { runId?: string; runIds?: string[] };
+        const allRunIds = prepData.runIds ?? (prepData.runId ? [prepData.runId] : []);
+        if (!allRunIds.length) {
           setPhase("error");
           setRunError("Servidor não devolveu runId. Tenta de novo.");
           setPipelineError("Servidor não devolveu runId. Tenta de novo.");
           setCards(prev => prev.map(c => ({ ...c, streaming: false })));
           return;
         }
-        streamUrl = `${base}/api/rodar/stream?runId=${encodeURIComponent(runId)}`;
+        // Auto-split: guarda partes restantes pra processar sequencialmente
+        splitQueue = allRunIds.slice(1);
+        splitTotalParts = allRunIds.length;
+        if (allRunIds.length > 1) setSplitInfo({ current: 1, total: allRunIds.length });
+        streamUrl = `${base}/api/rodar/stream?runId=${encodeURIComponent(allRunIds[0]!)}`;
       } catch {
         // Rede caiu antes da resposta. Pra app user não dá pra cair no fallback
         // /stream?prompt (vai 403); pra AO, fallback funciona.
@@ -497,89 +508,96 @@ export default function Dashboard() {
       streamUrl = `${base}/api/rodar/stream?prompt=${encodeURIComponent(trimmed)}`;
     }
 
-    // Sinaliza que a sessão já existe no servidor. A partir daqui, perder a conexão
-    // (ou fechar a página) NÃO cancela o RODAR — ele segue e manda o email. Local (não
-    // state) pra ser lido de forma confiável dentro do onerror, sem valor defasado.
-    let runStarted = false;
-    const es = new EventSource(streamUrl);
-    // A abertura do SSE (200) só acontece DEPOIS dos checks de crédito/runId no servidor:
-    // a partir daqui a sessão está comprometida e o run vai até o email, mesmo que a página
-    // feche. Marcar aqui (e não só no frame assembleiaId) fecha a janela em que a conexão
-    // cai entre abrir o stream e o 1º frame chegar — evitando "Conexão falhou" falso.
-    es.onopen = () => { runStarted = true; };
-    es.onmessage = (e: MessageEvent<string>) => {
-      try {
-        const msg = JSON.parse(e.data) as { ai?: string; chunk?: string; done?: boolean; error?: boolean; type?: string; emailSent?: boolean; assembleiaId?: number; abstencao?: string; provider?: string; fallback?: string; message?: string; replica?: boolean; stage?: string; wave?: number; totalWaves?: number; active?: string[] };
-        if (msg.type === "assembleiaId" && msg.assembleiaId) { runStarted = true; setAssembleiaId(msg.assembleiaId); return; }
-        if (msg.stage === "onda") {
-          // Nova onda/grupo de vozes começou. Marca as vozes da onda como "started" pro
-          // núcleo orbital tirá-las da fila ("aguardando a vez") e atualiza o contador.
-          setWaveInfo({ wave: msg.wave ?? 0, total: msg.totalWaves ?? 0 });
-          if (msg.active && msg.active.length) {
-            const activeSet = new Set(msg.active);
-            setCards(prev => prev.map(c => activeSet.has(c.label) ? { ...c, started: true } : c));
-          }
-          return;
-        }
-        if (msg.type === "replicaStart") { setReplicaPhase(true); return; }
-        if (msg.type === "replicaComplete") {
-          setReplicaPhase(false);
-          setCards(prev => prev.map(c => ({ ...c, replicaStreaming: false })));
-          return;
-        }
-        if (msg.type === "complete") {
-          es.close();
-          setEmailSent(msg.emailSent ?? false);
-          if (msg.assembleiaId) setAssembleiaId(msg.assembleiaId);
-          setPhase("done");
-          setWaveInfo(null);
-          setReplicaPhase(false);
-          setCards(prev => prev.map(c => ({ ...c, replicaStreaming: false })));
-          void fetchHistory();
-          return;
-        }
-        if (msg.ai && msg.replica) {
-          // 2ª rodada: vozes reagindo umas às outras. Acumula em campo separado.
-          if (!msg.done) {
-            setCards(prev => prev.map(c => c.label === msg.ai ? { ...c, replicaText: (c.replicaText ?? "") + (msg.chunk ?? ""), replicaStreaming: true } : c));
-          } else {
-            setCards(prev => prev.map(c => c.label === msg.ai ? { ...c, replicaText: (c.replicaText ?? "") + (msg.chunk ?? ""), replicaStreaming: false } : c));
-          }
-          return;
-        }
-        if (msg.ai) {
-          if (msg.fallback === "tradutor") {
-            // Auto-fallback: IA falhou no prompt longo → vai retry com resumo do Tradutor.
-            // Limpa texto atual e mostra indicador "(pediu resumo ao Tradutor...)".
-            setCards(prev => prev.map(c => c.label === msg.ai ? { ...c, text: "[pediu resumo ao Tradutor — tentando de novo...]\n\n", streaming: true, done: false, error: false, started: true } : c));
+    // Inicia stream SSE para uma URL. Função nomeada para poder ser chamada recursivamente
+    // nas partes seguintes do auto-split (prompt > 20k → múltiplas assembleias sequenciais).
+    const startPart = (url: string, partIndex: number) => {
+      let runStarted = false;
+      const es = new EventSource(url);
+      es.onopen = () => { runStarted = true; };
+      es.onmessage = (e: MessageEvent<string>) => {
+        try {
+          const msg = JSON.parse(e.data) as { ai?: string; chunk?: string; done?: boolean; error?: boolean; type?: string; emailSent?: boolean; assembleiaId?: number; abstencao?: string; provider?: string; fallback?: string; message?: string; replica?: boolean; stage?: string; wave?: number; totalWaves?: number; active?: string[] };
+          if (msg.type === "assembleiaId" && msg.assembleiaId) { runStarted = true; setAssembleiaId(msg.assembleiaId); return; }
+          if (msg.stage === "onda") {
+            setWaveInfo({ wave: msg.wave ?? 0, total: msg.totalWaves ?? 0 });
+            if (msg.active && msg.active.length) {
+              const activeSet = new Set(msg.active);
+              setCards(prev => prev.map(c => activeSet.has(c.label) ? { ...c, started: true } : c));
+            }
             return;
           }
-          if (msg.abstencao) {
-            setCards(prev => prev.map(c => c.label === msg.ai ? { ...c, streaming: false, done: true, abstencao: msg.abstencao, provider: msg.provider } : c));
-          } else if (!msg.done) {
-            setCards(prev => prev.map(c => c.label === msg.ai ? { ...c, text: c.text + (msg.chunk ?? ""), streaming: true, started: true } : c));
-          } else {
-            setCards(prev => prev.map(c => c.label === msg.ai ? { ...c, streaming: false, done: true, error: !!msg.error } : c));
+          if (msg.type === "replicaStart") { setReplicaPhase(true); return; }
+          if (msg.type === "replicaComplete") {
+            setReplicaPhase(false);
+            setCards(prev => prev.map(c => ({ ...c, replicaStreaming: false })));
+            return;
           }
+          if (msg.type === "complete") {
+            es.close();
+            setWaveInfo(null);
+            setReplicaPhase(false);
+            const nextRunId = splitQueue.shift();
+            if (nextRunId) {
+              // Mais partes a processar: reseta cards e inicia próxima assembleia
+              const nextPart = partIndex + 1;
+              setSplitInfo({ current: nextPart, total: splitTotalParts });
+              const freshCards = configList.map(c => ({ label: c.label, text: "", streaming: true, done: false, error: false, started: false }));
+              setCards(freshCards);
+              setAssembleiaId(null);
+              setEmailSent(false);
+              setWaveInfo(null);
+              startPart(`${base}/api/rodar/stream?runId=${encodeURIComponent(nextRunId)}`, nextPart);
+            } else {
+              // Todas as partes concluídas
+              setEmailSent(msg.emailSent ?? false);
+              if (msg.assembleiaId) setAssembleiaId(msg.assembleiaId);
+              setPhase("done");
+              setSplitInfo(null);
+              setCards(prev => prev.map(c => ({ ...c, replicaStreaming: false })));
+              void fetchHistory();
+            }
+            return;
+          }
+          if (msg.ai && msg.replica) {
+            if (!msg.done) {
+              setCards(prev => prev.map(c => c.label === msg.ai ? { ...c, replicaText: (c.replicaText ?? "") + (msg.chunk ?? ""), replicaStreaming: true } : c));
+            } else {
+              setCards(prev => prev.map(c => c.label === msg.ai ? { ...c, replicaText: (c.replicaText ?? "") + (msg.chunk ?? ""), replicaStreaming: false } : c));
+            }
+            return;
+          }
+          if (msg.ai) {
+            if (msg.fallback === "tradutor") {
+              setCards(prev => prev.map(c => c.label === msg.ai ? { ...c, text: "[pediu resumo ao Tradutor — tentando de novo...]\n\n", streaming: true, done: false, error: false, started: true } : c));
+              return;
+            }
+            if (msg.abstencao) {
+              setCards(prev => prev.map(c => c.label === msg.ai ? { ...c, streaming: false, done: true, abstencao: msg.abstencao, provider: msg.provider } : c));
+            } else if (!msg.done) {
+              setCards(prev => prev.map(c => c.label === msg.ai ? { ...c, text: c.text + (msg.chunk ?? ""), streaming: true, started: true } : c));
+            } else {
+              setCards(prev => prev.map(c => c.label === msg.ai ? { ...c, streaming: false, done: true, error: !!msg.error } : c));
+            }
+          }
+        } catch {}
+      };
+      es.onerror = () => {
+        es.close();
+        setWaveInfo(null);
+        setCards(prev => prev.map(c => ({ ...c, streaming: false })));
+        if (runStarted) {
+          setBgContinued(true);
+          setPhase("error");
+          setRunError("As IAs continuam trabalhando em segundo plano. Pode fechar a página — o resultado chega no seu email quando terminar.");
+        } else {
+          setBgContinued(false);
+          setPhase("error");
+          setRunError("Conexão com o servidor falhou. Tenta de novo.");
         }
-      } catch {}
+      };
     };
-    es.onerror = () => {
-      es.close();
-      setWaveInfo(null);
-      setCards(prev => prev.map(c => ({ ...c, streaming: false })));
-      if (runStarted) {
-        // A deliberação já começou no servidor. Fechar a página / cair a conexão não a
-        // interrompe: as vozes seguem e o resultado chega por email. Mensagem calma, sem susto.
-        setBgContinued(true);
-        setPhase("error");
-        setRunError("As IAs continuam trabalhando em segundo plano. Pode fechar a página — o resultado chega no seu email quando terminar.");
-      } else {
-        setBgContinued(false);
-        setPhase("error");
-        setRunError("Conexão com o servidor falhou. Tenta de novo.");
-      }
-    };
+
+    startPart(streamUrl, 1);
   }, [fetchHistory]);
 
   const handleRodar = () => {
@@ -1010,6 +1028,13 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Banner de auto-split: prompt foi dividido em múltiplas assembleias */}
+              {splitInfo && (
+                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-sm font-medium text-amber-800">
+                  <span className="text-base">📄</span>
+                  <span>Assembleia <strong>parte {splitInfo.current} de {splitInfo.total}</strong> — prompt dividido automaticamente (acima de 20k chars)</span>
+                </div>
+              )}
               {/* Seletor de estilo da tela de espera */}
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-xs font-medium text-muted-foreground mr-1">Estilo:</span>

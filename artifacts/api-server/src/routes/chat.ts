@@ -1212,9 +1212,11 @@ router.post("/rodar/prepare", requireRodarAccess, async (req, res) => {
     }
   }
 
-  const runId = Math.random().toString(36).slice(2) + Date.now().toString(36);
-  await prepSet(runId, {
-    prompt: prompt?.trim() || DEFAULT_PROMPT,
+  const rawPrompt = prompt?.trim() || DEFAULT_PROMPT;
+  const SPLIT_CHARS = 20_000;
+
+  const prepPayload = (partPrompt: string) => ({
+    prompt: partPrompt,
     strategies: strategies ?? {},
     bunkerMode,
     replica,
@@ -1228,10 +1230,49 @@ router.post("/rodar/prepare", requireRodarAccess, async (req, res) => {
     projectId,
     projectName: projectContext?.name,
   });
-  // Recupera assembleias órfãs em background (envia email do que travou na rodada anterior)
+
   void recoverOrphans();
-  res.json({ runId });
+
+  if (rawPrompt.length <= SPLIT_CHARS) {
+    // Caminho normal: prompt cabe numa assembleia só
+    const runId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    await prepSet(runId, prepPayload(rawPrompt));
+    res.json({ runId, runIds: [runId] });
+    return;
+  }
+
+  // Auto-split: divide em partes de até 20k chars respeitando parágrafos / frases / palavras
+  const splitParts = splitPromptIntoParts(rawPrompt, SPLIT_CHARS);
+  const total = splitParts.length;
+  const runIds: string[] = [];
+  for (let i = 0; i < total; i++) {
+    const label = `[Parte ${i + 1} de ${total}]\n\n`;
+    const partRunId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    await prepSet(partRunId, prepPayload(label + splitParts[i]));
+    runIds.push(partRunId);
+  }
+  logger.info({ total, totalChars: rawPrompt.length }, "[prepare] prompt auto-split em partes");
+  res.json({ runId: runIds[0], runIds });
 });
+
+function splitPromptIntoParts(text: string, maxChars: number): string[] {
+  if (text.length <= maxChars) return [text];
+  const parts: string[] = [];
+  let remaining = text;
+  while (remaining.length > 0) {
+    if (remaining.length <= maxChars) { parts.push(remaining.trim()); break; }
+    let splitAt = -1;
+    const paraBreak = remaining.lastIndexOf('\n\n', maxChars);
+    if (paraBreak > maxChars * 0.4) splitAt = paraBreak;
+    if (splitAt < 0) { const lb = remaining.lastIndexOf('\n', maxChars); if (lb > maxChars * 0.4) splitAt = lb; }
+    if (splitAt < 0) { const sb = remaining.lastIndexOf('. ', maxChars); if (sb > maxChars * 0.4) splitAt = sb + 1; }
+    if (splitAt < 0) { const wb = remaining.lastIndexOf(' ', maxChars); if (wb > 0) splitAt = wb; }
+    if (splitAt < 0) splitAt = maxChars;
+    parts.push(remaining.slice(0, splitAt).trim());
+    remaining = remaining.slice(splitAt).trim();
+  }
+  return parts.filter(p => p.length > 0);
+}
 
 // Status do pipeline pós-RODAR (editorial → ágora → secretário → perfeito)
 // AO-only: expõe estado interno de sessões de todos os usuários.
