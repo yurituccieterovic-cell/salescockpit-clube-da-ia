@@ -203,8 +203,26 @@ async function initStripe(): Promise<void> {
   }
 }
 
+async function ensureRunPrepTable(): Promise<void> {
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS rodar_run_preps (
+        run_id TEXT PRIMARY KEY,
+        data JSONB NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    // Limpar entradas antigas (> 10 min) ao boot
+    await db.execute(sql`DELETE FROM rodar_run_preps WHERE created_at < NOW() - INTERVAL '10 minutes'`);
+    logger.info("rodar_run_preps ok");
+  } catch (err) {
+    logger.error({ err }, "Falha criando rodar_run_preps");
+  }
+}
+
 async function bootstrap(): Promise<void> {
   await ensureAppUserTables();
+  await ensureRunPrepTable();
   await ensureAssembleiaColumns();
   await ensureArvoreChatColumns();
   await ensureArvoreChatIndexes();

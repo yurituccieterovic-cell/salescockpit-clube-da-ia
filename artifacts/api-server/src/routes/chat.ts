@@ -29,8 +29,30 @@ import { summarizeYouTubeBlock, stripYouTubeUrls } from "../lib/video-processor"
 
 const router = Router();
 
-// ── Run preparation store (long prompt + strategies) ──────────────────────
-const runPrepStore = new Map<string, { prompt: string; strategies: Record<string, string>; gerarVideo: boolean; gerarVideoReal: boolean; publicarSocial: boolean; attachmentsText?: string; urlContextText?: string; projectContextText?: string; appUserId?: number; projectId?: number; projectName?: string; bunkerMode: BunkerMode; replica: boolean }>();
+// ── Run preparation store — persiste no DB para sobreviver a cold starts ──
+type RunPrepData = { prompt: string; strategies: Record<string, string>; gerarVideo: boolean; gerarVideoReal: boolean; publicarSocial: boolean; attachmentsText?: string; urlContextText?: string; projectContextText?: string; appUserId?: number; projectId?: number; projectName?: string; bunkerMode: BunkerMode; replica: boolean };
+
+async function prepSet(runId: string, data: RunPrepData): Promise<void> {
+  try {
+    await db.execute(sql`INSERT INTO rodar_run_preps (run_id, data) VALUES (${runId}, ${JSON.stringify(data)}::jsonb) ON CONFLICT (run_id) DO UPDATE SET data = EXCLUDED.data, created_at = NOW()`);
+  } catch { /* fallback silencioso — usa query string no stream */ }
+}
+
+async function prepGet(runId: string): Promise<RunPrepData | null> {
+  try {
+    const rows = await db.execute(sql`SELECT data FROM rodar_run_preps WHERE run_id = ${runId} LIMIT 1`);
+    const row = (rows as any).rows?.[0];
+    return row ? (row.data as RunPrepData) : null;
+  } catch { return null; }
+}
+
+async function prepDelete(runId: string): Promise<void> {
+  try {
+    await db.execute(sql`DELETE FROM rodar_run_preps WHERE run_id = ${runId}`);
+    // Aproveitar e limpar entradas expiradas em background
+    db.execute(sql`DELETE FROM rodar_run_preps WHERE created_at < NOW() - INTERVAL '10 minutes'`).catch(() => {});
+  } catch { /* silencioso */ }
+}
 
 // Roda as vozes do RODAR em ONDAS/GRUPOS discretos: dispara um grupo de `size` vozes,
 // espera TODAS terminarem, faz uma pausa curta e só então abre o próximo grupo.
@@ -1179,7 +1201,7 @@ router.post("/rodar/prepare", requireRodarAccess, async (req, res) => {
   }
 
   const runId = Math.random().toString(36).slice(2) + Date.now().toString(36);
-  runPrepStore.set(runId, {
+  await prepSet(runId, {
     prompt: prompt?.trim() || DEFAULT_PROMPT,
     strategies: strategies ?? {},
     bunkerMode,
@@ -1194,7 +1216,6 @@ router.post("/rodar/prepare", requireRodarAccess, async (req, res) => {
     projectId,
     projectName: projectContext?.name,
   });
-  setTimeout(() => runPrepStore.delete(runId), 5 * 60 * 1000);
   // Recupera assembleias órfãs em background (envia email do que travou na rodada anterior)
   void recoverOrphans();
   res.json({ runId });
@@ -1250,8 +1271,8 @@ router.get("/rodar/stream", requireRodarAccess, async (req, res) => {
   // contexto privado de projeto, prepend acontece DEPOIS de salvar a session.
   let cleanTopic: string;
   const runId = req.query.runId as string | undefined;
-  if (runId && runPrepStore.has(runId)) {
-    const prep = runPrepStore.get(runId)!;
+  const prep = runId ? await prepGet(runId) : null;
+  if (prep) {
     prompt = prep.prompt;
     cleanTopic = prep.prompt;
     strategies = prep.strategies;
@@ -1277,7 +1298,7 @@ router.get("/rodar/stream", requireRodarAccess, async (req, res) => {
     if (prep.projectContextText) {
       prompt = prep.projectContextText + prompt;
     }
-    runPrepStore.delete(runId);
+    void prepDelete(runId!);
   } else if (req.session?.appUserId && !req.session?.authenticated) {
     // App users must go through /rodar/prepare (which debits credits).
     // Calling /rodar/stream directly without a valid runId bypasses credit debit.
