@@ -80,10 +80,18 @@ router.post("/auth/login", (req, res) => {
     return;
   }
 
+  // Parceiro (visibilidade pública — assembleias, Árvore pública, sem acesso admin)
+  const parceiroUser = process.env.PARCEIRO_USERNAME?.trim();
+  const parceiroHash = process.env.PARCEIRO_PASSWORD_HASH?.trim();
+  const isParceiroAttempt = parceiroUser && parceiroHash &&
+    (username ?? "").trim() === parceiroUser &&
+    /^\$2[aby]\$/.test(parceiroHash) &&
+    bcrypt.compareSync(password ?? "", parceiroHash);
+
   const userMatch = (username ?? "").trim() === validUser;
   const passMatch = userMatch && bcrypt.compareSync(password ?? "", validPassHash);
 
-  if (userMatch && passMatch) {
+  if (isParceiroAttempt || (userMatch && passMatch)) {
     clearAttempts(ip);
     req.session.regenerate((err) => {
       if (err) {
@@ -92,14 +100,14 @@ router.post("/auth/login", (req, res) => {
         return;
       }
       req.session.authenticated = true;
-      req.session.user = username as string;
+      req.session.user = (isParceiroAttempt ? parceiroUser : username) as string;
       if (rememberMe) {
         req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
       } else {
         req.session.cookie.expires = undefined;
       }
       req.session.save(() => {
-        res.json({ ok: true, user: username });
+        res.json({ ok: true, user: req.session.user, role: isParceiroAttempt ? "parceiro" : "ao" });
       });
     });
   } else {
@@ -137,9 +145,11 @@ router.get("/auth/me", (req, res) => {
   if (req.session.authenticated) {
     const user = req.session.user;
     const ao = process.env.AO_USERNAME?.trim();
+    const parceiro = process.env.PARCEIRO_USERNAME?.trim();
+    const isParceiro = !!parceiro && user === parceiro;
     // Mantém em sincronia com isVideoAllowed em routes/chat.ts
-    const canVideo = user === "luddlocke" || user === "yuri" || (!!ao && user === ao);
-    res.json({ authenticated: true, user, canVideo });
+    const canVideo = !isParceiro && (user === "luddlocke" || user === "yuri" || (!!ao && user === ao));
+    res.json({ authenticated: true, user, canVideo, role: isParceiro ? "parceiro" : "ao" });
   } else {
     res.status(401).json({ authenticated: false });
   }
