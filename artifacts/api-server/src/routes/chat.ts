@@ -1526,6 +1526,12 @@ router.get("/rodar/stream", requireRodarAccess, async (req, res) => {
     void getTradutorSummary();
   }
 
+  // Timeout por voz na 1ª rodada: igual ao da réplica mas um pouco mais longo
+  // (a 1ª rodada roda 4 vozes em paralelo, a réplica roda sequencialmente).
+  // Sem este timeout, uma voz que pendurar (fetch sem timeout no groq-retry)
+  // segura a onda inteira indefinidamente e a sessão trava após a 1ª onda.
+  const VOICE_TIMEOUT_MS = 120_000;
+
   // Build stream task for one AI based on its strategy.
   // Auto-fallback: se isLong e a tentativa principal falhar SEM produzir conteúdo, pede
   // resumo ao Tradutor e tenta de novo. Abstenção continua opt-in (com motivo).
@@ -1541,7 +1547,27 @@ router.get("/rodar/stream", requireRodarAccess, async (req, res) => {
       return null;
     }
 
-    return (async () => {
+    // Wrapper com timeout: resolve (nunca rejeita) para que Promise.allSettled
+    // continue mesmo se a voice pendurar. Se o timer disparar antes do done,
+    // emite o marcador de erro e persiste para que a sessão não fique órfã.
+    return new Promise<void>((resolve) => {
+      let voiceDone = false;
+      const timer = setTimeout(() => {
+        if (voiceDone) return;
+        voiceDone = true;
+        if (!completedLabels.has(label)) {
+          const hasPrior = (collected[label] ?? "").length > 0;
+          const marker = hasPrior
+            ? `\n[travei: timeout ${VOICE_TIMEOUT_MS / 1000}s]`
+            : `[erro: timeout ${VOICE_TIMEOUT_MS / 1000}s]`;
+          send({ ai: label, chunk: marker.trimStart(), done: true, error: true, travei: hasPrior });
+          collected[label] = (collected[label] ?? "") + marker;
+          persistMessage(label, collected[label]);
+        }
+        resolve();
+      }, VOICE_TIMEOUT_MS);
+
+      (async () => {
       // 1) Estratégia explícita: resumo-tradutor → usa direto, sem fallback aninhado.
       if (s === "resumo-tradutor") {
         const summary = await getTradutorSummary();
@@ -1595,7 +1621,14 @@ router.get("/rodar/stream", requireRodarAccess, async (req, res) => {
       } catch (err) {
         cb2("", true, String(err));
       }
-    })();
+      })().then(() => {
+        if (!voiceDone) { voiceDone = true; clearTimeout(timer); }
+        resolve();
+      }).catch(() => {
+        if (!voiceDone) { voiceDone = true; clearTimeout(timer); }
+        resolve();
+      });
+    });
   };
 
   // Grok/Segurança/Juíz/Chefe do Olheiro: 2026-05 migrados de xAI pra Llama/Groq (xAI sem crédito).

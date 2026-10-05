@@ -1501,7 +1501,9 @@ router.post("/arvore/heartbeat/batch", requireAuth, async (req, res) => {
     try {
       const r = await runHeartbeat({ force: true });
       results.push(r);
-      if (i < n - 1) await new Promise((r) => setTimeout(r, 1500));
+      // 4s entre chamadas: Gemini free tem 15 RPM (= 1 req/4s).
+      // Com 1.5s, a 2ª chamada chegava antes do janela de rate limit abrir.
+      if (i < n - 1) await new Promise((r) => setTimeout(r, 4000));
     } catch (err) {
       req.log.error({ err, i }, "arvore.heartbeat.batch iter failed");
       results.push({ posted: false, reason: (err as Error).message });
