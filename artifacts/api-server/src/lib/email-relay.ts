@@ -6,6 +6,9 @@
  *
  * POST https://site-st.onrender.com/api/bridge/email-relay
  * Header: x-bridge-secret = BRIDGE_SECRET
+ *
+ * Retry: 3 tentativas com backoff 2s → 6s antes de desistir.
+ * Timeout: 20s por tentativa (PAP pode estar em cold start).
  */
 
 import { logger } from "./logger";
@@ -25,19 +28,37 @@ export async function relayEmail(opts: {
     return;
   }
 
-  const resp = await fetch(`${papApiUrl}/api/bridge/email-relay`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-bridge-secret": bridge,
-    },
-    body: JSON.stringify(opts),
-  });
+  const delays = [0, 2000, 6000]; // ms antes de cada tentativa
 
-  if (!resp.ok) {
-    const err = await resp.text().catch(() => "");
-    throw new Error(`relayEmail HTTP ${resp.status}: ${err.slice(0, 200)}`);
+  for (let attempt = 0; attempt < delays.length; attempt++) {
+    if (delays[attempt] > 0) {
+      await new Promise((r) => setTimeout(r, delays[attempt]));
+    }
+
+    try {
+      const resp = await fetch(`${papApiUrl}/api/bridge/email-relay`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-bridge-secret": bridge,
+        },
+        body: JSON.stringify(opts),
+        signal: AbortSignal.timeout(20_000),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.text().catch(() => "");
+        throw new Error(`HTTP ${resp.status}: ${err.slice(0, 200)}`);
+      }
+
+      logger.info({ to: opts.to, subject: opts.subject.slice(0, 50), attempt }, "relayEmail OK");
+      return;
+    } catch (err) {
+      const isLast = attempt === delays.length - 1;
+      if (isLast) {
+        throw new Error(`relayEmail falhou após ${delays.length} tentativas: ${(err as Error).message}`);
+      }
+      logger.warn({ err, attempt, to: opts.to }, `relayEmail tentativa ${attempt + 1} falhou — tentando novamente`);
+    }
   }
-
-  logger.info({ to: opts.to, subject: opts.subject.slice(0, 50) }, "relayEmail OK");
 }
