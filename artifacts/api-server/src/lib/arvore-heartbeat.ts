@@ -18,9 +18,37 @@ Você lê o que aconteceu no site (atas das assembleias, PERFEITOs publicados) e
 Não cite tudo: escolha o fio que mais te chama. Pode contradizer, perguntar, lamentar, celebrar.
 Termine com uma imagem ou uma pergunta — nunca com conclusão fechada.`;
 
+// Chama Groq diretamente, sem passar pelo pool compartilhado (que pode estar em cooling
+// após RODAR). AbortSignal com 40s evita pendurar para sempre.
+async function callGroqDirect(messages: { role: "system" | "user" | "assistant"; content: string }[]): Promise<string> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error("GROQ_API_KEY não configurada");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 40_000);
+  try {
+    const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages, temperature: 0.9, max_tokens: 600 }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!resp.ok) throw new Error(`Groq ${resp.status}: ${await resp.text().catch(() => "")}`);
+    const json = await resp.json() as { choices?: { message?: { content?: string } }[] };
+    return json.choices?.[0]?.message?.content ?? "";
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function callBatch(messages: { role: "system" | "user" | "assistant"; content: string }[]): Promise<string> {
-  // 2026-05: migrado pra routeChat pool "batch" — não compete com chat ao vivo por
-  // cota Groq. Prefere Cloudflare (10k req/dia grátis), depois Mistral/Cerebras/Gemini.
+  // Tenta Groq direto primeiro (sem cooling compartilhado) — heartbeat não deve
+  // competir com RODAR nem travar se todos os providers estiverem em cooldown.
+  try {
+    return await callGroqDirect(messages);
+  } catch (err) {
+    logger.warn({ err }, "arvore-heartbeat: Groq direto falhou, tentando routeChat");
+  }
   const result = await routeChat({
     pool: "batch",
     messages,
@@ -54,13 +82,18 @@ export async function runHeartbeat(opts?: { force?: boolean }): Promise<{
     // Reduzido pra caber no rate limit diário do Groq (100k TPD).
     // Hard cap em 12k chars (~3k tokens) pra prompts não explodirem.
     let material = await getSiteContext({ jornalLimit: 3, atasLimit: 5 });
-    if (!material.trim()) return { posted: false, reason: "sem-material" };
     if (material.length > 12_000) material = material.slice(0, 12_000) + "\n…(truncado)";
 
-    // 3. Chama via router (pool batch — não compete com chat ao vivo)
+    // Se não há material ainda (banco vazio ou sem assembleias fechadas), a Árvore
+    // reflete livremente — sem material é melhor que silêncio.
+    const userContent = material.trim()
+      ? `Material das últimas horas no Looping Ético:\n\n${material}\n\nDevolva sua reflexão noturna.`
+      : `Ainda não há assembleias registradas. Faça uma reflexão inaugural: sobre o silêncio antes da primeira palavra, sobre o que uma assembleia carrega antes de existir, sobre o ato de começar.`;
+
+    // 3. Chama Groq direto (sem cooling) com fallback ao router
     const content = await callBatch([
       { role: "system", content: HEARTBEAT_SYSTEM },
-      { role: "user", content: `Material das últimas horas no Looping Ético:\n\n${material}\n\nDevolva sua reflexão noturna.` },
+      { role: "user", content: userContent },
     ]);
 
     if (!content || content.length < 20) return { posted: false, reason: "resposta-vazia" };

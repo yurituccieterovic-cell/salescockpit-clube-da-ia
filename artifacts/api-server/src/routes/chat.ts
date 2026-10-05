@@ -22,6 +22,7 @@ import { getMemoriaEstruturada } from "../lib/arvore-memoria";
 import { getAssembleiaMemoryContext } from "../lib/arvore-assembleia-memory";
 import { getAssembleiaIndex, recallFromSessions } from "../lib/site-context";
 import { getArchContext, extractMentionedPaths } from "../lib/arch-context";
+import { relayEmail } from "../lib/email-relay";
 import { loadProjectContext } from "../lib/arvore-project-context";
 import { parseBunkerMode, getDefaultBunkerMode, voiceBunkered, type BunkerMode } from "../lib/bunker-mode";
 import { fetchUrlsFromText, type FetchResult } from "../lib/url-fetcher";
@@ -1062,6 +1063,17 @@ export async function finalizeAssembleia(sessionId: number, gerarVideo: boolean 
   } catch (err) {
     logger.error({ err, sessionId, gerarVideo }, `[finalize ${sessionId}] pipeline failure`);
     setPipelinePhase(sessionId, "falhou", (err as Error).message?.slice(0, 200));
+    // Fallback: pipeline editorial falhou (LLM cooling / timeout), mas o usuário
+    // precisa ao menos receber o transcript. Envia email simples sem análise.
+    if (transcript.length > 0) {
+      const to = process.env.GMAIL_USER ?? "luddlocke@gmail.com";
+      const errMsg = (err as Error).message?.slice(0, 200) ?? "erro desconhecido";
+      void relayEmail({
+        to,
+        subject: `[SC] Assembleia #${sessionId} — transcript (pipeline falhou)`,
+        text: `Pipeline editorial falhou: ${errMsg}\n\nTópico: ${prompt}\n\n${"─".repeat(60)}\n\n${transcript.slice(0, 8_000)}`,
+      }).catch((e) => logger.warn({ e }, "[finalize] fallback email também falhou"));
+    }
   }
 }
 
