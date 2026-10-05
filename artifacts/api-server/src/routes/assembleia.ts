@@ -531,7 +531,7 @@ router.post("/assembleia/sessions/:id/close", requireAuthOrClube, async (req, re
       for (const m of messages.filter(m => m.senderType === "ai" || m.senderType === "editorial")) {
         aiResponses[m.sender] = m.content;
       }
-      await runAgoraDeliberativa(session.topic, aiResponses, decision, metaAnalysis, id);
+      await runAgoraDeliberativa(session.topic, aiResponses, decision, metaAnalysis, id, false, undefined, false);
     } catch (err) {
       console.error("Assembleia close background error:", err);
       emitter.emit("closed", {});
