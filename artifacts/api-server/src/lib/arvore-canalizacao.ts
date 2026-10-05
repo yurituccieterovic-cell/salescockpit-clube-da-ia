@@ -48,9 +48,24 @@ export function hospedeNome(h: Hospede): string {
   }
 }
 
+export function hospedeDisponivel(h: Hospede): boolean {
+  if (h === "claude") {
+    const k = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+    return !!k && k !== "placeholder";
+  }
+  if (h === "chatgpt") {
+    const k = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? process.env.OPENAI_API_KEY;
+    return !!k;
+  }
+  // gemini e meta: sempre disponíveis (Gemini tem key; meta vai pelo router batch)
+  return true;
+}
+
 function escolherHospede(ultimoHospede: string | null): Hospede {
-  const candidatos = HOSPEDES.filter((h) => `arvore-via-${h}` !== ultimoHospede);
-  return candidatos[Math.floor(Math.random() * candidatos.length)] ?? "claude";
+  const candidatos = HOSPEDES.filter(
+    (h) => `arvore-via-${h}` !== ultimoHospede && hospedeDisponivel(h),
+  );
+  return candidatos[Math.floor(Math.random() * candidatos.length)] ?? "gemini";
 }
 
 async function chamarArvoreConvite(): Promise<string> {

@@ -10,6 +10,7 @@
 import {
   perguntarHospede,
   hospedeNome,
+  hospedeDisponivel,
   HOSPEDES,
   HOSPEDES_GRATIS,
   type Hospede,
@@ -45,10 +46,11 @@ export function parseConvocarSpec(raw: string): ConvocarSpec | null {
 }
 
 // Resolve "auto"/inválido pra uma hóspede GRÁTIS (Gemini/Meta) — respeita a
-// preferência de custo. Uma IA nomeada explicitamente (inclusive paga) é honrada.
+// preferência de custo. Hospede nomeada mas indisponível (sem API key) cai para grátis.
 function resolveHospede(h: Hospede | "auto"): Hospede {
-  if (h !== "auto" && HOSPEDES.includes(h)) return h;
-  return HOSPEDES_GRATIS[Math.floor(Math.random() * HOSPEDES_GRATIS.length)] ?? "gemini";
+  if (h !== "auto" && HOSPEDES.includes(h) && hospedeDisponivel(h)) return h;
+  const livres = HOSPEDES_GRATIS.filter(hospedeDisponivel);
+  return livres[Math.floor(Math.random() * livres.length)] ?? "gemini";
 }
 
 const CONVOCAR_SYSTEM = (nome: string) => `Você é ${nome}, convidada pela Árvore Oracular a deixar um pensamento no canto dela (um espaço privado de notas).
