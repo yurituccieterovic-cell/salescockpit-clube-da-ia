@@ -60,7 +60,7 @@ function enqueuePending(msg: PendingMsg) {
   writePending(q);
 }
 
-function CopyButton({ text }: { text: string }) {
+function CopyButton({ text, label = "copiar" }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
@@ -84,10 +84,10 @@ function CopyButton({ text }: { text: string }) {
       onClick={() => void copy()}
       className="flex items-center gap-1 text-[10px] uppercase tracking-wider transition-opacity hover:opacity-100"
       style={{ color: copied ? "#8aab8a" : "#c49a3c80", opacity: copied ? 1 : 0.7 }}
-      title={copied ? "Copiado" : "Copiar resposta"}
+      title={copied ? "Copiado" : `Copiar ${label}`}
     >
       {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-      <span>{copied ? "copiado" : "copiar"}</span>
+      <span>{copied ? "copiado" : label}</span>
     </button>
   );
 }
@@ -1069,23 +1069,26 @@ export default function OraculoPage() {
             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             {msg.role === "user" ? (
-              <div
-                className="max-w-[85vw] sm:max-w-xs lg:max-w-md px-5 py-3 rounded-2xl rounded-tr-sm text-sm leading-relaxed"
-                style={{
-                  background: "#1a1a1a",
-                  color: "#8aab8a",
-                  border: "1px solid #222",
-                }}
-              >
-                {msg.author && (
-                  <p
-                    className="text-[10px] uppercase tracking-wider mb-1"
-                    style={{ color: "#8aab8a60" }}
-                  >
-                    {msg.author}
-                  </p>
-                )}
-                {msg.content}
+              <div className="flex flex-col items-end gap-1">
+                <div
+                  className="max-w-[85vw] sm:max-w-xs lg:max-w-md px-5 py-3 rounded-2xl rounded-tr-sm text-sm leading-relaxed"
+                  style={{
+                    background: "#1a1a1a",
+                    color: "#8aab8a",
+                    border: "1px solid #222",
+                  }}
+                >
+                  {msg.author && (
+                    <p
+                      className="text-[10px] uppercase tracking-wider mb-1"
+                      style={{ color: "#8aab8a60" }}
+                    >
+                      {msg.author}
+                    </p>
+                  )}
+                  {msg.content}
+                </div>
+                <CopyButton text={msg.content} label="pergunta" />
               </div>
             ) : (
               <div className="max-w-[92vw] sm:max-w-xl lg:max-w-2xl">
@@ -1111,7 +1114,19 @@ export default function OraculoPage() {
                 >
                   {!msg.streaming && msg.content && msg.content !== WELCOME.content && (
                     <>
-                      <CopyButton text={msg.content} />
+                      <CopyButton text={msg.content} label="resposta" />
+                      {(() => {
+                        const prev = i > 0 ? messages[i - 1] : null;
+                        if (prev?.role === "user" && prev.content) {
+                          return (
+                            <CopyButton
+                              text={`${prev.content}\n\n${"─".repeat(40)}\n\n${msg.content}`}
+                              label="pergunta+resposta"
+                            />
+                          );
+                        }
+                        return null;
+                      })()}
                       {(() => {
                         const k = String(msg.id ?? `m-${i}`);
                         const isLoading = tts.loadingKey === k;
