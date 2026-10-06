@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, voiceProfilesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { openai } from "@workspace/integrations-openai-ai-server";
 
@@ -249,26 +249,41 @@ async function generateImage(_generator: string, _prompt: string): Promise<{ url
 }
 
 router.get("/vozes", async (_req, res) => {
-  const profiles = await db.select().from(voiceProfilesTable);
+  try {
+    const result = await db.execute(sql`
+      SELECT id, voice_name as "voiceName", voice_type as "voiceType", bio,
+             self_description as "selfDescription", image_url as "imageUrl",
+             canva_format as "canvaFormat", image_generator as "imageGenerator",
+             generated_at as "generatedAt", created_at as "createdAt"
+      FROM voice_profiles
+    `);
+    const profiles = result.rows as Array<{
+      id: number; voiceName: string; voiceType: string; bio: string | null;
+      selfDescription: string | null; imageUrl: string | null; canvaFormat: string | null;
+      imageGenerator: string | null; generatedAt: Date | null; createdAt: Date;
+    }>;
 
-  // Return in defined order
-  const ordered = VOICE_CONFIGS.map(cfg => {
-    const found = profiles.find(p => p.voiceName === cfg.voiceName);
-    return found ?? {
-      id: -1,
-      voiceName: cfg.voiceName,
-      voiceType: cfg.voiceType,
-      bio: cfg.bio ?? null,
-      selfDescription: null,
-      imageUrl: null,
-      canvaFormat: null,
-      imageGenerator: null,
-      generatedAt: null,
-      createdAt: new Date(),
-    };
-  });
+    // Return in defined order
+    const ordered = VOICE_CONFIGS.map(cfg => {
+      const found = profiles.find(p => p.voiceName === cfg.voiceName);
+      return found ?? {
+        id: -1,
+        voiceName: cfg.voiceName,
+        voiceType: cfg.voiceType,
+        bio: cfg.bio ?? null,
+        selfDescription: null,
+        imageUrl: null,
+        canvaFormat: null,
+        imageGenerator: null,
+        generatedAt: null,
+        createdAt: new Date(),
+      };
+    });
 
-  res.json(ordered);
+    res.json(ordered);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
 router.post("/vozes/generate", async (req, res) => {
