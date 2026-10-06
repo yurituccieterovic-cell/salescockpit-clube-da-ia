@@ -171,13 +171,18 @@ export async function sendEditorialEmail(
 // ── Routes ────────────────────────────────────────────────────────────────
 
 router.get("/assembleia/sessions", requireAuthOrClube, async (req, res) => {
-  const username = (req.session.clubeUser ?? req.session.user)!;
-  const isAO = !!req.session.authenticated;
-  const q = db.select().from(assembleiaSessionsTable);
-  const sessions = isAO
-    ? await q.orderBy(desc(assembleiaSessionsTable.createdAt))
-    : await q.where(eq(assembleiaSessionsTable.createdBy, username)).orderBy(desc(assembleiaSessionsTable.createdAt));
-  res.json(sessions);
+  try {
+    const username = (req.session.clubeUser ?? req.session.user)!;
+    const isAO = !!req.session.authenticated;
+    // Use raw SQL to avoid Drizzle ORM issues with the assembleia_sessions table
+    const rows = isAO
+      ? (await db.execute(sql`SELECT id, topic, mode, status, created_by as "createdBy", editorial_report as "editorialReport", meta_analysis as "metaAnalysis", agora_resultado as "agoraResultado", video_curadoria as "videoCuradoria", closed_at as "closedAt", created_at as "createdAt" FROM assembleia_sessions ORDER BY created_at DESC LIMIT 100`)).rows
+      : (await db.execute(sql`SELECT id, topic, mode, status, created_by as "createdBy", editorial_report as "editorialReport", meta_analysis as "metaAnalysis", agora_resultado as "agoraResultado", video_curadoria as "videoCuradoria", closed_at as "closedAt", created_at as "createdAt" FROM assembleia_sessions WHERE created_by = ${username} ORDER BY created_at DESC`)).rows;
+    res.json(rows);
+  } catch (err) {
+    logger.error({ err }, "/assembleia/sessions error");
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
 router.get("/assembleia/contagem", async (_req, res) => {
@@ -200,43 +205,42 @@ router.get("/assembleia/contagem", async (_req, res) => {
 });
 
 router.get("/assembleia/historico", requireAuthOrClube, async (req, res) => {
-  const username = (req.session.clubeUser ?? req.session.user)!;
-  const isAO = !!req.session.authenticated;
-  // AO (admin) vê tudo; usuário do Clube vê só o que criou
-  const whereClause = isAO
-    ? eq(assembleiaSessionsTable.status, "closed")
-    : and(eq(assembleiaSessionsTable.status, "closed"), eq(assembleiaSessionsTable.createdBy, username));
-  const sessions = await db
-    .select()
-    .from(assembleiaSessionsTable)
-    .where(whereClause)
-    .orderBy(desc(assembleiaSessionsTable.closedAt));
+  try {
+    const username = (req.session.clubeUser ?? req.session.user)!;
+    const isAO = !!req.session.authenticated;
+    const sessions = isAO
+      ? (await db.execute(sql`SELECT id, topic, created_by as "createdBy", closed_at as "closedAt", editorial_report as "editorialReport", meta_analysis as "metaAnalysis" FROM assembleia_sessions WHERE status = 'closed' ORDER BY closed_at DESC LIMIT 100`)).rows as { id: number; topic: string; createdBy: string; closedAt: Date | null; editorialReport: string | null; metaAnalysis: string | null }[]
+      : (await db.execute(sql`SELECT id, topic, created_by as "createdBy", closed_at as "closedAt", editorial_report as "editorialReport", meta_analysis as "metaAnalysis" FROM assembleia_sessions WHERE status = 'closed' AND created_by = ${username} ORDER BY closed_at DESC`)).rows as { id: number; topic: string; createdBy: string; closedAt: Date | null; editorialReport: string | null; metaAnalysis: string | null }[];
 
-  const result = sessions.map(s => {
-    let publicContent = "";
-    let withheldCount = 0;
-    let secretExists = false;
-    if (s.editorialReport) {
-      try {
-        const r = JSON.parse(s.editorialReport) as EditorialDecision;
-        publicContent = r.public_content || "";
-        withheldCount = r.withheld?.length ?? 0;
-        secretExists = r.secret_exists ?? false;
-      } catch {}
-    }
-    return {
-      id: s.id,
-      topic: s.topic,
-      createdBy: s.createdBy,
-      closedAt: s.closedAt,
-      publicContent,
-      withheldCount,
-      secretExists,
-      metaAnalysis: s.metaAnalysis ?? null,
-    };
-  });
+    const result = sessions.map(s => {
+      let publicContent = "";
+      let withheldCount = 0;
+      let secretExists = false;
+      if (s.editorialReport) {
+        try {
+          const r = JSON.parse(s.editorialReport) as EditorialDecision;
+          publicContent = r.public_content || "";
+          withheldCount = r.withheld?.length ?? 0;
+          secretExists = r.secret_exists ?? false;
+        } catch {}
+      }
+      return {
+        id: s.id,
+        topic: s.topic,
+        createdBy: s.createdBy,
+        closedAt: s.closedAt,
+        publicContent,
+        withheldCount,
+        secretExists,
+        metaAnalysis: s.metaAnalysis ?? null,
+      };
+    });
 
-  res.json(result);
+    res.json(result);
+  } catch (err) {
+    logger.error({ err }, "/assembleia/historico error");
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
 // PDF pacote único da sessão (ata + resultado Ágora + meta-análise + PERFEITO).
