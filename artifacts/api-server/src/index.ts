@@ -203,6 +203,54 @@ async function initStripe(): Promise<void> {
   }
 }
 
+async function ensureVozesLeadsEmails(): Promise<void> {
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS voice_profiles (
+        id SERIAL PRIMARY KEY,
+        voice_name TEXT NOT NULL UNIQUE,
+        voice_type TEXT NOT NULL DEFAULT 'ai',
+        bio TEXT,
+        self_description TEXT,
+        image_url TEXT,
+        canva_format TEXT,
+        image_generator TEXT,
+        generated_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS leads (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT,
+        phone TEXT,
+        company TEXT,
+        source TEXT,
+        status TEXT DEFAULT 'new',
+        notes TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS emails (
+        id SERIAL PRIMARY KEY,
+        from_address TEXT NOT NULL,
+        to_address TEXT NOT NULL,
+        subject TEXT,
+        body TEXT,
+        status TEXT DEFAULT 'pending',
+        sent_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    logger.info("voice_profiles / leads / emails ok");
+  } catch (err) {
+    logger.error({ err }, "Falha criando voice_profiles/leads/emails");
+  }
+}
+
 async function ensureRunPrepTable(): Promise<void> {
   try {
     await db.execute(sql`
@@ -222,6 +270,7 @@ async function ensureRunPrepTable(): Promise<void> {
 
 async function bootstrap(): Promise<void> {
   await ensureAppUserTables();
+  await ensureVozesLeadsEmails();
   await ensureRunPrepTable();
   await ensureAssembleiaColumns();
   await ensureArvoreChatColumns();
