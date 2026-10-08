@@ -46,7 +46,7 @@ export function getDefaultBunkerMode(): BunkerMode {
 
 // Vozes RODAR que rodam em provider pago hoje. Em Mode ≥1 elas pulam o paid attempt
 // e vão direto pro fallback OpenRouter+Gemini (mantendo persona via meta-prompt).
-const PAID_VOICES = new Set(["ChatGPT", "Claude", "Agente", "Arquiteto", "Tradutor"]);
+const PAID_VOICES = new Set(["ChatGPT", "Claude", "Agente", "Arquiteto", "Tradutor", "Metassemiótico", "Nébula", "Psicólogo"]);
 
 export function voiceBunkered(label: string, mode: BunkerMode): boolean {
   return mode >= 1 && PAID_VOICES.has(label);

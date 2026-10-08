@@ -1723,12 +1723,12 @@ router.get("/rodar/stream", requireRodarAccess, async (req, res) => {
     ["Sustentabilista", streamSustentabilista],
     ["Juíz", streamJuiz],
     ["Artista", streamArtista],
-    ["Metassemiótico", streamMetassemiotico],
-    ["Nébula", streamNebula],
+    ["Metassemiótico", withOpenRouterFallback("Metassemiótico", streamMetassemiotico, voiceBunkered("Metassemiótico", bunkerMode))],
+    ["Nébula", withOpenRouterFallback("Nébula", streamNebula, voiceBunkered("Nébula", bunkerMode))],
     ["Professora", streamProfessora],
     hasGroqMeta ? ["Olheiro", streamOlheiro] : null,
     hasXAI ? ["Chefe do Olheiro", streamChefeOlheiro] : null,
-    ["Psicólogo", streamPsicologo],
+    ["Psicólogo", withOpenRouterFallback("Psicólogo", streamPsicologo, voiceBunkered("Psicólogo", bunkerMode))],
     ["Médico", streamMedico],
   ];
 
