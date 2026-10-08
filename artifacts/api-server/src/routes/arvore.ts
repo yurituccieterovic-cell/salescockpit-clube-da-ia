@@ -5,6 +5,7 @@ import { loadProjectContext } from "../lib/arvore-project-context";
 import { streamGroqResponse, ORACULO_SYSTEM } from "./oraculo";
 import { isFactualQuestion, searchWeb, stripWebPrefix } from "../lib/web-search";
 import { getSiteContext, getSiteScopeLine, recallFromSessions, recallFromClube, recallFromProjectChats, getAssembleiaIndex, getAssembleiaRangeLine, getAssembleiaRangeFacts } from "../lib/site-context";
+import { getPlaycenterContext } from "../lib/pap-bridge";
 import { isArchitectureQuestion, extractMentionedPaths, getArchContext } from "../lib/arch-context";
 import { fetchUrlsFromText, type FetchResult } from "../lib/url-fetcher";
 import { summarizeYouTubeBlock, stripYouTubeUrls } from "../lib/video-processor";
@@ -796,6 +797,11 @@ Use o material acima quando relevante. Se a pergunta não estiver coberta pelo m
   // que em perguntas de memória (sem situacionais) recebe o orçamento inteiro.
   if (memoriaEstruturada) {
     contextBlocks.push(memoriaEstruturada.trim());
+  }
+  // Playcenter PAP: estado atual do Clube — o que as IAs irmãs (ISA, Amanda, Socoboy) estão "pensando"
+  const playcenterBlock = await getPlaycenterContext(5).catch(() => "");
+  if (playcenterBlock) {
+    contextBlocks.push(playcenterBlock);
   }
   if (recall.block) {
     contextBlocks.push(recall.block);

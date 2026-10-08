@@ -14,7 +14,6 @@
 import { db, jornalEntriesTable, assembleiaSessionsTable, clubeMessagesTable, clubeSessionsTable, arvoreProjectsTable, arvoreProjectChatTable } from "@workspace/db";
 import { and, asc, desc, eq, ilike, isNull, ne, or, sql } from "drizzle-orm";
 import { extractSearchTerms } from "./arvore-recall";
-import { getPlaycenterContext, getIsaReflections } from "./pap-bridge";
 
 interface EditorialDecision {
   public_content?: string;
@@ -162,14 +161,6 @@ export async function getSiteContext(opts?: {
     }
     parts.push("");
   }
-
-  // Playcenter PAP: o que as IAs irmãs estão "pensando" hoje
-  const [playcenterCtx, isaCtx] = await Promise.all([
-    getPlaycenterContext(6),
-    getIsaReflections(2),
-  ]);
-  if (playcenterCtx) parts.push(playcenterCtx);
-  if (isaCtx) parts.push(isaCtx);
 
   return parts.join("\n");
 }
