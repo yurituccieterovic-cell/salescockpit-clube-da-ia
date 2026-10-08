@@ -290,9 +290,9 @@ async function bootstrap(): Promise<void> {
     void quarantineUnsafeWebhookUrls();
     if (process.env.NODE_ENV === "production") {
       startHeartbeatLoop();
-      startBlueskyCuradoriaLoop();
-      startBlueskyRepliesLoop();
-      startBlueskyAlcanceLoop();
+      if (!process.env.BLUESKY_CURADORIA_PAUSED) startBlueskyCuradoriaLoop();
+      if (!process.env.BLUESKY_CURADORIA_PAUSED) startBlueskyRepliesLoop();
+      if (!process.env.BLUESKY_CURADORIA_PAUSED) startBlueskyAlcanceLoop();
       startDevaneioLoop();
       startCanalizacaoLoop();
       startRodaConsultasLoop();
