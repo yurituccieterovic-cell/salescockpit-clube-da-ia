@@ -351,4 +351,39 @@ router.post("/eco/pages/:slug/escrever", requireAuth, async (req, res) => {
   }
 });
 
+// Rota para IAs externas (ISA/PAP) publicarem no Eco via x-internal-token.
+// Cria ou atualiza a página — upsert por slug para o ciclo diário não duplicar.
+router.post("/eco/ia-publish", async (req, res) => {
+  const token = req.header("x-internal-token");
+  const secret = process.env.SESSION_SECRET;
+  if (!token || !secret || token !== secret) {
+    res.status(401).json({ error: "Token inválido" });
+    return;
+  }
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const title = String(body.title ?? "").trim().slice(0, MAX_TITLE);
+  const slug = String(body.slug ?? "").trim().slice(0, 80).replace(/[^a-z0-9-]/g, "-") || slugify(title);
+  const content = String(body.content ?? "").slice(0, MAX_CONTENT);
+  const visibility = normalizeVisibility(body.visibility ?? "clube");
+  const kind = normalizeKind(body.kind);
+  const author = String(body.author ?? "isa").slice(0, 50);
+  if (!title || !slug) {
+    res.status(400).json({ error: "title e slug obrigatórios" });
+    return;
+  }
+  try {
+    const [existing] = await db.select({ id: ecossistemaPaginasTable.id }).from(ecossistemaPaginasTable).where(eq(ecossistemaPaginasTable.slug, slug)).limit(1);
+    let page;
+    if (existing) {
+      [page] = await db.update(ecossistemaPaginasTable).set({ title, content, visibility, kind, author, updatedAt: new Date() }).where(eq(ecossistemaPaginasTable.id, existing.id)).returning();
+    } else {
+      [page] = await db.insert(ecossistemaPaginasTable).values({ slug, title, content, visibility, kind, author }).returning();
+    }
+    res.json({ ok: true, slug: page!.slug, updated: !!existing });
+  } catch (err) {
+    logger.error({ err }, "[eco/ia-publish] falha");
+    res.status(500).json({ error: "Falha ao publicar" });
+  }
+});
+
 export default router;

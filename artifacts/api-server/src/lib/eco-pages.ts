@@ -1,6 +1,7 @@
 import { db, ecossistemaPaginasTable } from "@workspace/db";
 import { desc, eq, ilike } from "drizzle-orm";
 import { extractLenientJsonObject, extractFieldsByKey } from "./lenient-json";
+import { notifyPlaycenterNewEco } from "./pap-bridge";
 
 // Berço de páginas do Ecossistema. Centraliza slug/validação/criação pra ser
 // usado tanto pelo editor (routes/ecossistema.ts) quanto pela Árvore quando ela
@@ -161,6 +162,8 @@ export async function publishEcoPage(input: CreateEcoPageInput): Promise<Publish
     }
   }
   const created = await createEcoPage(input);
+  // Notificar Playcenter do PAP quando visibilidade é clube ou pública
+  void notifyPlaycenterNewEco(created.title, created.slug, created.visibility);
   return { ...created, updated: false };
 }
 

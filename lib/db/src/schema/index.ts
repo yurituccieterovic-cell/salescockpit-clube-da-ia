@@ -12,3 +12,4 @@ export * from "./arvore_projects";
 export * from "./app_users";
 export * from "./ecossistema";
 export * from "./playground";
+export * from "./pap_bridge";
